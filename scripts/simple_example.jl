@@ -1,4 +1,4 @@
-using SpecialFunctions
+using SpecialFunctions, Hankel, Elliptic, PyPlot
 
 #constants in SI units
 mu_0 = 4*pi*10^-7
@@ -10,32 +10,26 @@ R = 10; #radius (metres)
 
 Hz_wavenumber(κ,z) = I * R * besselj1(κ*R) * exp(- κ * abs(z))/2;
 
-Hz_wavenumber(1,0)
-
-
-using Hankel
-
 ##
-hank_0 = QDHT(0,25*R,2001);
+max_radius = 3*R;
+hank_0 = QDHT(0,max_radius,201);
 
 ##
 Hz_radius = hank_0 \ Hz_wavenumber.(hank_0.k, R)
 
 ##
-zgrid = 0:0.01*R:25*R
+zgrid = 0:0.01*R:10*R
 Hzk_mat = [Hz_wavenumber(κ,z) for κ in hank_0.k, z in zgrid]
 Hzr_mat = hank_0 \ Hzk_mat
 
 plt.figure();
-plt.pcolor(hank_0.r, zgrid, Hzr_mat', vmin = -0.13, vmax = 0.13);
+plt.pcolor(hank_0.r, zgrid, Hzr_mat', vmin = -0.06, vmax = 0.06);
 gca().invert_yaxis();
 xlabel("r (m)")
 ylabel("z (m)")
 display(gcf());
 plt.close("all");
 
-##
-using Elliptic
 ##
 
 #analytic method for spatial fields
@@ -54,7 +48,7 @@ Hz_analytic_mat = [Hz_analytic(r,z) for r in hank_0.r, z in zgrid]
 
 ##
 plt.figure();
-plt.pcolor(hank_0.r, zgrid, Hz_analytic_mat', vmin = -0.13, vmax = 0.13);
+plt.pcolor(hank_0.r, zgrid, Hz_analytic_mat', vmin = -0.06, vmax = 0.06);
 gca().invert_yaxis();
 xlabel("r (m)")
 ylabel("z (m)")
@@ -86,18 +80,31 @@ dipole_approximation = [25/((r^2+z^2)^(3/2)) * (3*z^2/(z^2 + r^2) - 1) for r in 
 
 ##
 plt.figure();
-plt.pcolor(hank_0.r, zgrid, dipole_approximation', vmin = -0.13, vmax = 0.13);
+plt.pcolor(hank_0.r, zgrid, dipole_approximation', vmin = -0.06, vmax = 0.06);
 gca().invert_yaxis();
 xlabel("r (m)")
 ylabel("z (m)")
 display(gcf());
 plt.close("all");
+
+##
+#far-field comparison
+figure()
+plot(zgrid[end-200:end], dipole_approximation[1,end-200:end])
+plot(zgrid[end-200:end], Hzr_mat[1,end-200:end])
+plot(zgrid[end-200:end], Hz_analytic_mat[1,end-200:end])
+legend(["dipole", "numerical hankel transform", "analytic"])
+xlabel("z (m)")
+ylabel("Hz field (1/m)")
+display(gcf())
+close("all")
+
 ##
 ωl = 2.0e3 #Hz, typical for Earth's field strength
 B_halfspace, alpha_halfspace = responses([0,0.02], [Inf,Inf], hank_0.k, ωl)
 
 #Schelkunoff potential at each z
-function phiz(phi0, Bresponse, α, k, d, zgrid)
+function phiz(phi0, Bresponse, α, d, zgrid)
     #schelkunoff potential at the top of each layer
     phi_tops = zeros(ComplexF64, size(Bresponse)...)
     phi_tops[:,1] = phi0
@@ -106,6 +113,11 @@ function phiz(phi0, Bresponse, α, k, d, zgrid)
     end
     #convert depth to z-values
     z_interface = cumsum(d)
+
+    phiz = zeros(ComplexF64, length(phi0), length(zgrid))
+    for z in zgrid
+        
+    end
     
 
 end
