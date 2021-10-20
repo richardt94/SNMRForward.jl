@@ -288,3 +288,129 @@ figure()
 pcolor(r_vals, zgrid, Hzr_loop_above', vmin = -0.03, vmax = 0.03)
 gca().invert_yaxis()
 gcf()
+
+##
+#mixed j1/j0 filter
+Hz_wavenumber_j1(κ,z,r) = I * R * besselj0(κ*r) * exp(- κ * abs(z))/2;
+
+function Hz_offset(r,z)
+    retval = 0
+    if r < R
+        #use j1 filter
+        kgrid = Filter_base/R
+        integration_kernel = kgrid .* Hz_wavenumber_j1.(kgrid, z, r)
+        retval = real(1/R * Filter_J1' * integration_kernel)
+    else
+        #j0 filter
+        kgrid = Filter_base/r
+        integration_kernel = kgrid .* Hz_wavenumber.(kgrid, z)
+        retval = real(1/r * Filter_J0' * integration_kernel)
+    end
+    retval
+end
+
+rgrid = 0:0.2:1.5*R
+zgrid = 0:0.1:5*R
+
+Hzr_mixedfilters = [Hz_offset(r,z) for r in rgrid, z in zgrid]
+Hzr_analytic = [Hz_analytic(r,z) for r in rgrid, z in zgrid]
+
+##
+fig,ax = subplots(1,2,figsize=(10,5))
+sca(ax[1])
+pcolor(rgrid, zgrid, Hzr_mixedfilters', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Mixed J0 and J1 filters")
+xlabel("r (m)")
+ylabel("z (m)")
+sca(ax[2])
+pcolor(rgrid, zgrid, Hzr_analytic', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Analytic result")
+xlabel("r (m)")
+ylabel("z (m)")
+
+
+
+display(gcf())
+close("all")
+
+## far field for mixed filters
+dipole_approximation = [25/((r^2+z^2)^(3/2)) * (3*z^2/(z^2 + r^2) - 1) for r in rgrid, z in zgrid]
+figure()
+plot(zgrid, Hzr_mixedfilters[1,:],zgrid,dipole_approximation[1,:], zgrid, Hzr_analytic[1,:])
+ylim([0,0.05])
+display(gcf())
+close("all")
+
+## debug near-surface artifacts
+Hz_surface_kernel(κ,r) = R*besselj0(κ * r) /(2) * κ 
+
+dense_k_grid = 0:0.01:100
+
+figure()
+plot(dense_k_grid, Hz_surface_kernel.(dense_k_grid, 1))
+
+sampling_k_grid = Filter_base/R
+
+scatter(sampling_k_grid, Hz_surface_kernel.(sampling_k_grid,1))
+xlim([0,100])
+display(gcf())
+close("all")
+
+Hz_depth_kernel(κ,r,z) = R*besselj0(κ*r) / 2 * κ * exp(-κ*z)
+figure()
+plot(dense_k_grid, Hz_depth_kernel.(dense_k_grid, 1,5))
+
+sampling_k_grid = Filter_base/R
+
+scatter(sampling_k_grid, Hz_depth_kernel.(sampling_k_grid,1,5))
+xlim([0,100])
+display(gcf())
+close("all")
+
+## low-pass cutoff
+filterspacing = Filter_base[2]/Filter_base[1]
+kcut(r) = pi/((filterspacing-1)*r)
+
+function Hz_offset(r,z)
+    retval = 0
+    if r < R
+        #use j1 filter with low-pass
+        kgrid = Filter_base/R
+        lowpass_k = 1 ./ (1 .+ (kgrid/kcut(r)).^3)
+        integration_kernel = lowpass_k .* kgrid .* Hz_wavenumber_j1.(kgrid, z, r)
+        retval = real(1/R * Filter_J1' * integration_kernel)
+    else
+        #j0 filter
+        kgrid = Filter_base/r
+        lowpass_k = 1 ./ (1 .+ (kgrid/kcut(R)).^3)
+        integration_kernel = lowpass_k .* kgrid .* Hz_wavenumber.(kgrid, z)
+        retval = real(1/r * Filter_J0' * integration_kernel)
+    end
+    retval
+end
+
+rgrid = 0:0.2:1.5*R
+zgrid = 0:0.1:2*R
+
+Hzr_mixedfilters = [Hz_offset(r,z) for r in rgrid, z in zgrid]
+Hzr_analytic = [Hz_analytic(r,z) for r in rgrid, z in zgrid]
+
+##
+fig,ax = subplots(1,2,figsize=(10,5))
+sca(ax[1])
+pcolor(rgrid, zgrid, Hzr_mixedfilters', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Mixed J0 and J1 filters")
+xlabel("r (m)")
+ylabel("z (m)")
+sca(ax[2])
+pcolor(rgrid, zgrid, Hzr_analytic', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Analytic result")
+xlabel("r (m)")
+ylabel("z (m)")
+
+display(gcf())
+close("all")
