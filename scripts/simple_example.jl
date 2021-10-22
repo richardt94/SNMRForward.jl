@@ -371,7 +371,7 @@ close("all")
 
 ## low-pass cutoff
 filterspacing = Filter_base[2]/Filter_base[1]
-kcut(r) = pi/((filterspacing-1)*r)
+kcut(r) = pi/(2*(filterspacing-1)*r)
 
 function Hz_offset(r,z)
     retval = 0
@@ -384,8 +384,7 @@ function Hz_offset(r,z)
     else
         #j0 filter
         kgrid = Filter_base/r
-        lowpass_k = 1 ./ (1 .+ (kgrid/kcut(R)).^3)
-        integration_kernel = lowpass_k .* kgrid .* Hz_wavenumber.(kgrid, z)
+        integration_kernel = kgrid .* Hz_wavenumber.(kgrid, z)
         retval = real(1/r * Filter_J0' * integration_kernel)
     end
     retval
@@ -414,3 +413,64 @@ ylabel("z (m)")
 
 display(gcf())
 close("all")
+
+## radial field - must use J1 kernel
+Hr_wavenumber(κ, z) = I * R * besselj1(κ*R) * exp(- κ * abs(z))/2;
+
+kcut_radial(r) = pi/(2*(filterspacing-1)*r)
+
+function Hr_offset(r,z)
+    #use j1 filter with low-pass
+    kgrid = Filter_base/r
+    lowpass_k = 1 ./ (1 .+ (kgrid/kcut_radial(r)).^3)
+    integration_kernel = lowpass_k .* kgrid .* Hr_wavenumber.(kgrid, z)
+    real(1/r * Filter_J1' * integration_kernel)
+end
+
+Hr_numeric = [Hr_offset(r,z) for r in rgrid, z in zgrid]
+
+fig,ax = subplots(1,2,figsize=(10,5))
+sca(ax[1])
+pcolor(rgrid, zgrid, Hzr_mixedfilters', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Hz")
+xlabel("r (m)")
+ylabel("z (m)")
+sca(ax[2])
+pcolor(rgrid, zgrid, Hr_numeric', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Hr")
+xlabel("r (m)")
+ylabel("z (m)")
+
+display(gcf())
+
+##
+
+function Hr_analytic(r,z)
+    αsq = R^2 + r^2 + z^2 - 2*r*R;
+    βsq = R^2 + r^2 + z^2 + 2*r*R;
+    β = sqrt(βsq);
+    ksq = 1 - αsq/βsq;
+    C = 1/pi;
+    
+    C * z / (2*αsq*β*r) * ((R^2 + r^2 + z^2)*E(ksq) - αsq*K(ksq))
+end
+
+Hr_analytic_result = [Hr_analytic(r,z) for r in rgrid, z in zgrid]
+##
+fig,ax = subplots(1,2,figsize=(10,5))
+sca(ax[1])
+pcolor(rgrid, zgrid, Hr_analytic_result', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Hr analytic")
+xlabel("r (m)")
+ylabel("z (m)")
+sca(ax[2])
+pcolor(rgrid, zgrid, Hr_numeric', vmin=-0.06, vmax=0.06)
+gca().invert_yaxis()
+title("Hr numeric")
+xlabel("r (m)")
+ylabel("z (m)")
+
+display(gcf())
