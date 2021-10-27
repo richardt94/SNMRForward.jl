@@ -193,6 +193,8 @@ function phiz(phi0, Bresponse, α, d, zgrid)
     z_interface = cumsum(d)
 
     phiz = zeros(ComplexF64, length(phi0), length(zgrid))
+    phipz = zeros(ComplexF64, length(phi0), length(zgrid))
+
     layer_m = 1
     coeff_minus = phi_tops[:,1] .* (1 .+ Bresponse[:,1]./α[:,1])/2
     coeff_plus = 0
@@ -215,9 +217,11 @@ function phiz(phi0, Bresponse, α, d, zgrid)
         
         phiz[:,iz] = coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)) +
                         coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
+        phipz[:,iz] = α[:,m].* (coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
+                        - coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)))
     end
 
-    phiz
+    phiz, phipz
 end
 
 ## conductive half-space, at 2 kHz
@@ -515,3 +519,19 @@ function co_counter_field(Bz, Br, φ, θ)
 
     [Bplus; Bminus; exp_i_ζ]
 end
+
+##
+
+H_params_loop = co_counter_field.(Hzr_mixedfilters, Hr_numeric, π/3, 0)
+
+H_co = first.(H_params_loop)
+ζ = last.(H_params_loop)
+
+fig,ax = subplots(1,2)
+sca(ax[1])
+pcolor(rgrid, zgrid, H_co',vmin=-0.1, vmax=0.1)
+gca().invert_yaxis()
+sca(ax[2])
+pcolor(rgrid, zgrid, ζ', vmin=-1, vmax=1)
+gca().invert_yaxis()
+display(gcf())
