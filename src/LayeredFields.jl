@@ -51,7 +51,7 @@ function phiz(phi0, Bresponse, α, d, zgrid)
         
         phiz[:,iz] = coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)) +
                         coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
-        phipz[:,iz] = α[:,m].* (coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
+        phipz[:,iz] = α[:,layer_m].* (coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
                         - coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)))
     end
 

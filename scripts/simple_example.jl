@@ -217,7 +217,7 @@ function phiz(phi0, Bresponse, α, d, zgrid)
         
         phiz[:,iz] = coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)) +
                         coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
-        phipz[:,iz] = α[:,m].* (coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
+        phipz[:,iz] = α[:,layer_m].* (coeff_plus .* exp.(α[:,layer_m]*(z-h_mp1))
                         - coeff_minus .* exp.(-α[:,layer_m]*(z-h_m)))
     end
 
@@ -236,7 +236,7 @@ phi0 = 2* phi0_free .* k_vals ./ (k_vals .+ B_halfspace[:,1])
 
 #drop the free-space layer from arguments to the phiz function
 #we have already done the coupling into the first earth layer
-phizk_loop = phiz(phi0, B_halfspace, alpha_halfspace, d, zgrid)
+phizk_loop, _ = phiz(phi0, B_halfspace, alpha_halfspace, d, zgrid)
 
 #
 Hzk_halfspace = k_vals.^2 .* phizk_loop
