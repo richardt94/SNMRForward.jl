@@ -57,7 +57,7 @@ close(gcf())
 Hfield_params = SNMRForward.co_counter_field.(Hz, Hr, π/3, 0)
 
 Hco = first.(Hfield_params)
-e_i_ζ = last.(Hfield_params)
+ζ = last.(Hfield_params)
 
 ##
 fig, ax = subplots(1,2)
@@ -66,7 +66,7 @@ pcolor(rgrid, zgrid, real.(Hco)', vmin = -0.06, vmax=0.06)
 gca().invert_yaxis()
 display(gcf())
 sca(ax[2])
-pcolor(rgrid, zgrid, angle.(e_i_ζ)', vmin = -π, vmax=π)
+pcolor(rgrid, zgrid, ζ', vmin = -π, vmax=π)
 gca().invert_yaxis()
 display(gcf())
 close(gcf())

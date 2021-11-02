@@ -19,9 +19,10 @@ function co_counter_field(Bz, Br, φ, θ)
     Bstar = conj(Bperp)
     BdotB = transpose(Bperp) * Bperp
     BdotBstar =  transpose(Bperp) * Bstar
-    BcrossBstar =  real(im * (Bperp[1] * Bstar[2] - Bperp[2] * Bstar[1]))
+    BcrossBstar =  imag(Bperp[1] * Bstar[2] - Bperp[2] * Bstar[1])
 
-    exp_i_ζ = sqrt(BdotB/abs(BdotB))
+    ζ = -angle(BdotB/abs(BdotB))/2
+
     αt = sqrt((BdotBstar + abs(BdotB))/2)
     βt = sqrt((BdotBstar - abs(BdotB))/2)
     
@@ -32,5 +33,5 @@ function co_counter_field(Bz, Br, φ, θ)
     Bplus = αt - βt
     Bminus = αt + βt
 
-    [Bplus; Bminus; exp_i_ζ]
+    [Bplus; Bminus; ζ]
 end
