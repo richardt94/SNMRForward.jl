@@ -6,7 +6,7 @@ function perpendicular_field(Bz, Br, φ, θ)
     #x is defined as
     #cross product of y and the unit earth field vector
     #(perpendicular to the earth field in the north-down plane)
-    Bperp_x = Bz * cos(φ) + Br * cos(θ) * sin(φ)
+    Bperp_x = -Bz * cos(φ) + Br * cos(θ) * sin(φ)
     Bperp_y = Br * sin(θ) 
     [Bperp_x; Bperp_y]
 end
@@ -23,8 +23,8 @@ function co_counter_field(Bz, Br, φ, θ)
 
     ζ = -real(angle(BdotB/abs(BdotB))/2)
 
-    αt = sqrt((BdotBstar + abs(BdotB))/2)
-    βt = sqrt((BdotBstar - abs(BdotB))/2)
+    αt = real(sqrt((BdotBstar + abs(BdotB))/2))
+    βt = real(sqrt((BdotBstar - abs(BdotB))/2))
     
     if BcrossBstar < 0
         βt *= -1
