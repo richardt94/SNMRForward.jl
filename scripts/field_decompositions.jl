@@ -1,8 +1,8 @@
 using Revise, SNMRForward
 
 R = 50
-rgrid = 0.1:0.5:2*R
-zgrid = 0.1*R:0.5:2*R
+rgrid = 0.1:0.5:4*R
+zgrid = 0.1*R:0.25:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
@@ -172,7 +172,7 @@ k1d = zeros(ComplexF64, size(zgrid)...)
 # This should go in a "1D kernel" function later
 
 ϕ = 13*π/36
-q = 1
+q = 5
 ωl = 2*π*2.5e3
 for (i_th, θ) = enumerate(thetagrid)
     Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
@@ -260,12 +260,13 @@ gca().invert_yaxis()
 display(gcf())
 
 ## do an actual forward model
+dz = zgrid[2] - zgrid[1]
 fwd_kernel = kq * m0
 ## 10 - 20 m
 w = zeros(length(zgrid))
 w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
 
-response = fwd_kernel' * w
+response = fwd_kernel' * w * dz
 
 fig, ax = subplots(3,1, figsize=(5,15))
 sca(ax[1])
@@ -277,7 +278,7 @@ display(gcf())
 w = zeros(length(zgrid))
 w[(zgrid .>= 30) .& (zgrid .<= 45)] .= 1
 
-response = fwd_kernel' * w
+response = fwd_kernel' * w * dz
 
 sca(ax[2])
 plot(qgrid, real.(response))
@@ -288,7 +289,7 @@ display(gcf())
 w = zeros(length(zgrid))
 w[(zgrid .>= 60) .& (zgrid .<= 80)] .= 1
 
-response = fwd_kernel' * w
+response = fwd_kernel' * w * dz
 
 sca(ax[3])
 plot(qgrid, real.(response))
