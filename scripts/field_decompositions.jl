@@ -2,12 +2,14 @@ using Revise, SNMRForward
 
 R = 50
 rgrid = 0.1:0.5:2*R
-zgrid = 0.01*R:0.5:2*R
+zgrid = 0.1*R:0.5:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
+#ωl = SNMRForward.γh * 0.000048
+##
 d = [Inf]
-σ = [0.05]
+σ = [0.001]
 
 #define k grid for j0 and j1 kernels
 
@@ -171,7 +173,7 @@ k1d = zeros(ComplexF64, size(zgrid)...)
 
 ϕ = 13*π/36
 q = 1
-ωl = 2.5e3
+ωl = 2*π*2.5e3
 for (i_th, θ) = enumerate(thetagrid)
     Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
 
@@ -206,3 +208,92 @@ cs = contourf(rgrid, zgrid, αt', levels=[0,45,90,135,210,225,270,315,360])
 gca().invert_yaxis()
 colorbar(cs)
 display(gcf())
+
+## wrap it up in a function
+function kernel_1d(q, ϕ, ωl, Hz, Hr)
+    n_theta_points = 100
+    thetagrid = range(0, 2*pi, length=n_theta_points)
+
+    #radial integral scale
+    dr = (rgrid[2] - rgrid[1]) * rgrid
+    #azimuthal integral scale
+    dtheta = thetagrid[2] - thetagrid[1]
+
+    k1d = zeros(ComplexF64, size(zgrid)...)
+
+    for (i_th, θ) = enumerate(thetagrid)
+        Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
+
+        Hco = first.(Hparams)
+        ζ = last.(Hparams)
+        Hctr = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+
+        kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
+        k1d += dtheta*kernel'*dr
+    end
+    k1d
+end
+
+## contour plot of 1D kernel (cf. fig. 5.6, Hertrich)
+qgrid = 0:0.4:15
+ϕ = 13*π/36
+# ωl = 2*π*2.5e3
+
+kq = reduce(hcat, kernel_1d(q, ϕ, ωl, Hz, Hr) for q in qgrid)
+
+##
+figure()
+contourf(zgrid, qgrid, real.(kq)', cmap="RdBu", vmin = -3.5, vmax=3.5,levels=10)
+display(gcf())
+close(gcf())
+
+##
+Be = ωl/SNMRForward.γh
+m0 = SNMRForward.mag_factor(293.0) * Be
+
+##
+full_kq = k1d * m0 # in V/m
+figure()
+plot(full_kq * 10^9,zgrid)
+gca().set_yscale("log")
+gca().invert_yaxis()
+display(gcf())
+
+## do an actual forward model
+fwd_kernel = kq * m0
+## 10 - 20 m
+w = zeros(length(zgrid))
+w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
+
+response = fwd_kernel' * w
+
+fig, ax = subplots(3,1, figsize=(5,15))
+sca(ax[1])
+plot(qgrid, real.(response))
+title("Saturated layer 10 - 20 m")
+ylabel("Response voltage (V)")
+display(gcf())
+## 30 - 45 m
+w = zeros(length(zgrid))
+w[(zgrid .>= 30) .& (zgrid .<= 45)] .= 1
+
+response = fwd_kernel' * w
+
+sca(ax[2])
+plot(qgrid, real.(response))
+title("Saturated layer 30 - 45 m")
+ylabel("Response voltage (V)")
+display(gcf())
+## 60 - 80 m
+w = zeros(length(zgrid))
+w[(zgrid .>= 60) .& (zgrid .<= 80)] .= 1
+
+response = fwd_kernel' * w
+
+sca(ax[3])
+plot(qgrid, real.(response))
+title("Saturated layer 60 - 80 m")
+xlabel("Pulse moment (A s)")
+ylabel("Response voltage (V)")
+display(gcf())
+savefig("Forwards.png")
