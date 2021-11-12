@@ -2,7 +2,7 @@ using Revise, SNMRForward
 
 R = 50
 rgrid = 0.1:0.5:2*R
-zgrid = 0.1*R:0.5:2*R
+zgrid = 0.01*R:0.5:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
@@ -80,10 +80,10 @@ end
 using PyPlot
 fig, ax = subplots(1,2)
 sca(ax[1])
-pcolor(rgrid, zgrid, real.(Hz)', vmin = -0.06, vmax=0.06)
+pcolor(rgrid, zgrid, real.(Hz)', vmin = -0.01, vmax=0.01)
 gca().invert_yaxis()
 sca(ax[2])
-pcolor(rgrid, zgrid, real.(Hr)', vmin = -0.06, vmax=0.06)
+pcolor(rgrid, zgrid, real.(Hr)', vmin = -0.01, vmax=0.01)
 gca().invert_yaxis()
 display(gcf())
 close(gcf())
@@ -170,7 +170,7 @@ k1d = zeros(ComplexF64, size(zgrid)...)
 # This should go in a "1D kernel" function later
 
 ϕ = 13*π/36
-q = 3
+q = 1
 ωl = 2.5e3
 for (i_th, θ) = enumerate(thetagrid)
     Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
@@ -183,5 +183,26 @@ for (i_th, θ) = enumerate(thetagrid)
     k1d += dtheta*kernel'*dr
 end
 figure()
-plot(zgrid,abs.(k1d))
+plot(real.(k1d),zgrid)
+ylabel("z (m)")
+xlabel("kernel (arb. units)")
+gca().invert_yaxis()
+gca().set_yscale("log")
+display(gcf())
+
+## tipping angle for comparison with literature
+θ = -π/2
+Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
+
+Hco = first.(Hparams)
+ζ = last.(Hparams)
+Hctr = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+
+q = 10
+αt = ((SNMRForward.γh * q * μ * Hco) .% (2*π))/π * 180
+
+figure()
+cs = contourf(rgrid, zgrid, αt', levels=[0,45,90,135,210,225,270,315,360])
+gca().invert_yaxis()
+colorbar(cs)
 display(gcf())

@@ -30,8 +30,8 @@ function co_counter_field(Bz, Br, φ, θ)
         βt *= -1
     end
     
-    Bplus = αt - βt
-    Bminus = αt + βt
+    Bplus = (αt - βt)/2
+    Bminus = (αt + βt)/2
 
     [Bplus; Bminus; ζ]
 end
