@@ -1,13 +1,12 @@
 using Revise, SNMRForward
 
 R = 50
-rgrid = 0.1:0.5:4*R
+rgrid = 0.1:0.4:2*R
 zgrid = 0.1*R:0.25:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
-#ωl = SNMRForward.γh * 0.000048
-##
+# ωl = SNMRForward.γh * 0.00005
 d = [Inf]
 σ = [0.001]
 
@@ -56,7 +55,8 @@ filterspacing = SNMRForward.Filter_base_801[2] / SNMRForward.Filter_base_801[1]
 kcut(r) = pi/((filterspacing-1)*r)
 lowpass_k(k,r) = 1/(1 + (k/kcut(r))^3)
 
-Hz_kernel_j1 =  lowpass_k.(kj1,R) .* kj1 .^ 3 .* permutedims(phiz_j1, (1,3,2))
+# Hz_kernel_j1 =  lowpass_k.(kj1,R) .* kj1 .^ 3 .* permutedims(phiz_j1, (1,3,2))
+Hz_kernel_j1 = kj1 .^ 3 .* permutedims(phiz_j1, (1,3,2))
 
 
 ## compute Hz and Hr field kernels for each k value
@@ -126,12 +126,33 @@ gca().invert_yaxis()
 colorbar(cs)
 display(gcf())
 
-##
-maximum(imag.(Hco))
+## plot up the normalised co- and counter-rotating fields
+norm_factor = 10^4 * SNMRForward.mu_0 * 0.299895
+fig, ax = subplots(1,2,figsize=(10,8))
+sca(ax[1])
+ylabel("z (m)")
+xlabel("r (m)")
+title("co-rotating field")
+contourf(rgrid, zgrid, log10.(norm_factor * Hco)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0])
+gca().invert_yaxis()
+sca(ax[2])
+title("counter-rotating field")
+xlabel("r (m)")
+cs = contourf(rgrid, zgrid, log10.(norm_factor * H_counter)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0])
+gca().invert_yaxis()
+
+colorbar(cs,location="bottom", ax=ax, label = "log B")
+
+display(gcf())
+savefig("co_counter_compare.png")
+close(gcf())
+
 
 ##
 μ = SNMRForward.mu_0
 kernel = SNMRForward.point_kernel.(10, μ * Hco, μ * H_counter, ζ, ωl)
+
+kernel *= 2 * SNMRForward.mag_factor(300.0) * ωl/SNMRForward.γh
 
 # ## get the full perpendicular field
 # Hperp = SNMRForward.perpendicular_field.(Hz,Hr,13*π/36,π/2)
@@ -155,8 +176,9 @@ kernel = SNMRForward.point_kernel.(10, μ * Hco, μ * H_counter, ζ, ωl)
 
 # ##
 figure()
-pcolor(rgrid, zgrid, imag.(kernel)')
+cs = contourf(rgrid, zgrid, real.(kernel)'/3.89619e-10, levels = [-0.1,-0.05,-0.02,-0.01,0.01,0.02,0.05,0.1],cmap = "gist_stern")
 gca().invert_yaxis()
+colorbar(cs)
 display(gcf())
 
 ##
@@ -172,8 +194,8 @@ k1d = zeros(ComplexF64, size(zgrid)...)
 # This should go in a "1D kernel" function later
 
 ϕ = 13*π/36
-q = 5
-ωl = 2*π*2.5e3
+q = 10
+# ωl = 2*π*2.5e3
 for (i_th, θ) = enumerate(thetagrid)
     Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
 
@@ -184,12 +206,28 @@ for (i_th, θ) = enumerate(thetagrid)
     kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
     k1d += dtheta*kernel'*dr
 end
+
+##
+
 figure()
-plot(real.(k1d),zgrid)
+plot(real.(k1d), zgrid)
 ylabel("z (m)")
 xlabel("kernel (arb. units)")
 gca().invert_yaxis()
 gca().set_yscale("log")
+display(gcf())
+
+##
+Be = ωl/SNMRForward.γh
+m0 = SNMRForward.mag_factor(300) * Be
+
+
+##
+full_kernel = k1d * m0 # in V/m
+figure()
+plot(real.(full_kernel * 10^9), zgrid)
+gca().set_yscale("log")
+gca().invert_yaxis()
 display(gcf())
 
 ## tipping angle for comparison with literature
@@ -206,12 +244,15 @@ q = 10
 figure()
 cs = contourf(rgrid, zgrid, αt', levels=[0,45,90,135,210,225,270,315,360])
 gca().invert_yaxis()
-colorbar(cs)
+xlabel("distance from loop centre (m)")
+ylabel("depth (m)")
+colorbar(cs, label = "tipping angle (degrees)")
 display(gcf())
+savefig("tipping.png")
 
 ## wrap it up in a function
 function kernel_1d(q, ϕ, ωl, Hz, Hr)
-    n_theta_points = 100
+    n_theta_points = 200
     thetagrid = range(0, 2*pi, length=n_theta_points)
 
     #radial integral scale
@@ -235,7 +276,7 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr)
 end
 
 ## contour plot of 1D kernel (cf. fig. 5.6, Hertrich)
-qgrid = 0:0.4:15
+qgrid = [0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 ϕ = 13*π/36
 # ωl = 2*π*2.5e3
 
@@ -246,18 +287,6 @@ figure()
 contourf(zgrid, qgrid, real.(kq)', cmap="RdBu", vmin = -3.5, vmax=3.5,levels=10)
 display(gcf())
 close(gcf())
-
-##
-Be = ωl/SNMRForward.γh
-m0 = SNMRForward.mag_factor(293.0) * Be
-
-##
-full_kq = k1d * m0 # in V/m
-figure()
-plot(full_kq * 10^9,zgrid)
-gca().set_yscale("log")
-gca().invert_yaxis()
-display(gcf())
 
 ## do an actual forward model
 dz = zgrid[2] - zgrid[1]
@@ -298,3 +327,4 @@ xlabel("Pulse moment (A s)")
 ylabel("Response voltage (V)")
 display(gcf())
 savefig("Forwards.png")
+##
