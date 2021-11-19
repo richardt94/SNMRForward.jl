@@ -2,7 +2,7 @@ using Revise, SNMRForward
 
 R = 50
 rgrid = 0.1:0.4:2*R
-zgrid = 0.1*R:0.25:2*R
+zgrid = 0.05*R:0.25:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
@@ -126,27 +126,43 @@ gca().invert_yaxis()
 colorbar(cs)
 display(gcf())
 
-## plot up the normalised co- and counter-rotating fields
-norm_factor = 10^4 * SNMRForward.mu_0 * 0.299895
+## plot up the co- and counter-rotating B fields
+# H -> B in tesla or gauss
+# for a 300 A current, normalised to match figure 1 of weichman
+μ_G = 4*π * 1e-3
+norm_factor = 300 * μ_G / 0.299895
 fig, ax = subplots(1,2,figsize=(10,8))
 sca(ax[1])
 ylabel("z (m)")
 xlabel("r (m)")
 title("co-rotating field")
-contourf(rgrid, zgrid, log10.(norm_factor * Hco)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0])
+contourf(rgrid, zgrid, log.(norm_factor * Hco)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0], cmap="jet")
 gca().invert_yaxis()
 sca(ax[2])
 title("counter-rotating field")
 xlabel("r (m)")
-cs = contourf(rgrid, zgrid, log10.(norm_factor * H_counter)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0])
+cs = contourf(rgrid, zgrid, log.(norm_factor * H_counter)', [-11,-6,-5.5,-5.0,-4.5,-4.0,-3.0,-2.0,-0.0], cmap="jet")
 gca().invert_yaxis()
 
 colorbar(cs,location="bottom", ax=ax, label = "log B")
 
 display(gcf())
-savefig("co_counter_compare.png")
 close(gcf())
+## horizontal cross section
+# Hz_cross = Hz[:,31]
+# Hr_cross = Hr[:,31]
+# thetagrid = (0:1:360)./360 * 2 * π
 
+# Hfield_params = reduce(hcat, SNMRForward.co_counter_field.(Hz_cross, Hr_cross, 13*π/36, θ) for θ in thetagrid)
+# Hco = first.(Hfield_params)
+# ζ = last.(Hfield_params)
+# H_counter = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+
+# fig = figure()
+# ax = fig.add_subplot(projection="polar")
+# μ_G = 4*π * 1e-3
+# contourf(thetagrid .+ π/2, rgrid, real.(μ_G * Hco * 300) / 0.0319839, levels = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1])
+# display(gcf())
 
 ##
 μ = SNMRForward.mu_0
@@ -182,7 +198,7 @@ colorbar(cs)
 display(gcf())
 
 ##
-n_theta_points = 100
+n_theta_points = 400
 thetagrid = range(0, 2*pi, length=n_theta_points)
 
 #radial integral scale
@@ -252,7 +268,7 @@ savefig("tipping.png")
 
 ## wrap it up in a function
 function kernel_1d(q, ϕ, ωl, Hz, Hr)
-    n_theta_points = 200
+    n_theta_points = 400
     thetagrid = range(0, 2*pi, length=n_theta_points)
 
     #radial integral scale
