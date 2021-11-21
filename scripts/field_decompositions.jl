@@ -1,8 +1,8 @@
 using Revise, SNMRForward
 
 R = 50
-rgrid = 0.1:0.4:2*R
-zgrid = 0.05*R:0.25:2*R
+rgrid = 0.1:1:4*R
+zgrid = 0.1*R:1:2*R
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
@@ -168,7 +168,7 @@ close(gcf())
 μ = SNMRForward.mu_0
 kernel = SNMRForward.point_kernel.(10, μ * Hco, μ * H_counter, ζ, ωl)
 
-kernel *= 2 * SNMRForward.mag_factor(300.0) * ωl/SNMRForward.γh
+kernel *= SNMRForward.mag_factor(300.0) * ωl/SNMRForward.γh
 
 # ## get the full perpendicular field
 # Hperp = SNMRForward.perpendicular_field.(Hz,Hr,13*π/36,π/2)
@@ -198,7 +198,7 @@ colorbar(cs)
 display(gcf())
 
 ##
-n_theta_points = 400
+n_theta_points = 100
 thetagrid = range(0, 2*pi, length=n_theta_points)
 
 #radial integral scale
@@ -225,15 +225,6 @@ end
 
 ##
 
-figure()
-plot(real.(k1d), zgrid)
-ylabel("z (m)")
-xlabel("kernel (arb. units)")
-gca().invert_yaxis()
-gca().set_yscale("log")
-display(gcf())
-
-##
 Be = ωl/SNMRForward.γh
 m0 = SNMRForward.mag_factor(300) * Be
 
@@ -268,7 +259,7 @@ savefig("tipping.png")
 
 ## wrap it up in a function
 function kernel_1d(q, ϕ, ωl, Hz, Hr)
-    n_theta_points = 400
+    n_theta_points = 100
     thetagrid = range(0, 2*pi, length=n_theta_points)
 
     #radial integral scale
@@ -343,4 +334,23 @@ xlabel("Pulse moment (A s)")
 ylabel("Response voltage (V)")
 display(gcf())
 savefig("Forwards.png")
+##
+
+## horizontal cross section of the kernel
+q = 10
+Hz_cross = Hz[:,21]
+Hr_cross = Hr[:,21]
+thetagrid = (0:1:360)./360 * 2 * π
+
+Hfield_params = reduce(hcat, SNMRForward.co_counter_field.(Hz_cross, Hr_cross, 13*π/36, θ) for θ in thetagrid)
+Hco = first.(Hfield_params)
+ζ = last.(Hfield_params)
+H_counter = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+kernel_cross = m0 * SNMRForward.point_kernel.(q, μ*Hco, μ*H_counter, ζ, ωl) * 10^9
+
+fig = figure()
+ax = fig.add_subplot(projection="polar")
+pcolormesh(thetagrid .+ π/2, rgrid, real.(kernel_cross)/0.059512, cmap="RdBu", vmin=-1.0, vmax = 1.0)
+colorbar()
+display(gcf())
 ##
