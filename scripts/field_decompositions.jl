@@ -1,14 +1,14 @@
 using Revise, SNMRForward
 
-R = 50
-rgrid = 0.1:1:4*R
-zgrid = 0.1*R:1:2*R
+R = 24
+rgrid = 0.1:0.3:4*R
+zgrid = 0.1*R:1:100
 
 ## conductive half-space, at 2 kHz
-ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
-# ωl = SNMRForward.γh * 0.00005
+# ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
+ωl = SNMRForward.γh * 0.000048
 d = [Inf]
-σ = [0.001]
+σ = [0.02]
 
 #define k grid for j0 and j1 kernels
 
@@ -90,7 +90,8 @@ gca().invert_yaxis()
 display(gcf())
 close(gcf())
 ## say the mag. field inclination is 60 degrees. calculate corotating part and phase lag
-Hfield_params = SNMRForward.co_counter_field.(Hz, Hr, 13*π/36, -π/2)
+ϕ = 12*π/36
+Hfield_params = SNMRForward.co_counter_field.(Hz, Hr, ϕ, -π/2)
 
 Hco = first.(Hfield_params)
 ζ = last.(Hfield_params)
@@ -209,7 +210,6 @@ dtheta = thetagrid[2] - thetagrid[1]
 k1d = zeros(ComplexF64, size(zgrid)...)
 # This should go in a "1D kernel" function later
 
-ϕ = 13*π/36
 q = 10
 # ωl = 2*π*2.5e3
 for (i_th, θ) = enumerate(thetagrid)
@@ -217,7 +217,7 @@ for (i_th, θ) = enumerate(thetagrid)
 
     Hco = first.(Hparams)
     ζ = last.(Hparams)
-    Hctr = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+    Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
     kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
     k1d += dtheta*kernel'*dr
@@ -243,7 +243,7 @@ Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
 
 Hco = first.(Hparams)
 ζ = last.(Hparams)
-Hctr = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
 q = 10
 αt = ((SNMRForward.γh * q * μ * Hco) .% (2*π))/π * 180
@@ -274,7 +274,7 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr)
 
         Hco = first.(Hparams)
         ζ = last.(Hparams)
-        Hctr = reshape([a[2] for a in Hfield_params[:]], size(Hco)...)
+        Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
         kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
         k1d += dtheta*kernel'*dr
@@ -283,15 +283,29 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr)
 end
 
 ## contour plot of 1D kernel (cf. fig. 5.6, Hertrich)
-qgrid = [0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-ϕ = 13*π/36
+qgrid = [0.1,0.25,0.5,0.75,1,2,3,4,5,6,7,8,9,10,11] .* 2
+ϕ = 12*π/36
 # ωl = 2*π*2.5e3
 
 kq = reduce(hcat, kernel_1d(q, ϕ, ωl, Hz, Hr) for q in qgrid)
 
 ##
-figure()
-contourf(zgrid, qgrid, real.(kq)', cmap="RdBu", vmin = -3.5, vmax=3.5,levels=10)
+fig, ax = subplots(1,1,figsize=(5,10))
+contourf(qgrid, zgrid, 10^9 * real.(kq*m0), cmap="RdBu_r", levels=[-150,-100,-50,-25,0,25,50,100,150])
+gca().invert_yaxis()
+xlabel("q (A s)")
+ylabel("Depth (m)")
+colorbar(label = "Real part of 1D kernel (nV/m)")
+display(gcf())
+close(gcf())
+
+## "log sensitivity" (Fig. 5.5, Hertrich)
+fig, ax = subplots(1,1,figsize=(7,10))
+contourf(qgrid, zgrid, log10.(10^9 * abs.(kq*m0)), levels=[-1,0.1,0.6,1.15,1.8,2.5], cmap="jet")
+gca().invert_yaxis()
+xlabel("Pulse moment (A s)")
+ylabel("Depth (m)")
+colorbar(label = "log(1D sensitivity (nV/m))")
 display(gcf())
 close(gcf())
 
@@ -304,11 +318,12 @@ w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
 
 response = fwd_kernel' * w * dz
 
-fig, ax = subplots(3,1, figsize=(5,15))
+fig, ax = subplots(1,3, figsize=(15,5))
 sca(ax[1])
 plot(qgrid, real.(response))
 title("Saturated layer 10 - 20 m")
 ylabel("Response voltage (V)")
+xlabel("Pulse moment (A s)")
 display(gcf())
 ## 30 - 45 m
 w = zeros(length(zgrid))
@@ -319,7 +334,7 @@ response = fwd_kernel' * w * dz
 sca(ax[2])
 plot(qgrid, real.(response))
 title("Saturated layer 30 - 45 m")
-ylabel("Response voltage (V)")
+xlabel("Pulse moment (A s)")
 display(gcf())
 ## 60 - 80 m
 w = zeros(length(zgrid))
@@ -331,15 +346,14 @@ sca(ax[3])
 plot(qgrid, real.(response))
 title("Saturated layer 60 - 80 m")
 xlabel("Pulse moment (A s)")
-ylabel("Response voltage (V)")
 display(gcf())
 savefig("Forwards.png")
 ##
 
 ## horizontal cross section of the kernel
 q = 10
-Hz_cross = Hz[:,21]
-Hr_cross = Hr[:,21]
+Hz_cross = Hz[:,6]
+Hr_cross = Hr[:,6]
 thetagrid = (0:1:360)./360 * 2 * π
 
 Hfield_params = reduce(hcat, SNMRForward.co_counter_field.(Hz_cross, Hr_cross, 13*π/36, θ) for θ in thetagrid)
@@ -350,7 +364,30 @@ kernel_cross = m0 * SNMRForward.point_kernel.(q, μ*Hco, μ*H_counter, ζ, ωl) 
 
 fig = figure()
 ax = fig.add_subplot(projection="polar")
-pcolormesh(thetagrid .+ π/2, rgrid, real.(kernel_cross)/0.059512, cmap="RdBu", vmin=-1.0, vmax = 1.0)
-colorbar()
+ax.set_theta_zero_location("N")
+ax.set_rticks([25,50,75,100])
+ax.set_yticklabels(["25","50","75","r = 100 m"])
+pcolormesh(thetagrid, rgrid, real.(kernel_cross)/0.059512, cmap="RdBu", vmin=-1.0, vmax = 1.0)
+colorbar(label="Normalised real kernel")
 display(gcf())
+## 1d kernels at q = 1, 5, 10, 15 As
+qset = [1,5,10,15]
+
+kset = [kernel_1d(q, ϕ, ωl, Hz, Hr) for q in qset]
+
 ##
+fig, ax = subplots(1,length(kset), figsize = (15,5))
+
+for (i, (q,kern)) = enumerate(zip(qset,kset))
+    sca(ax[i])
+    if i == 1
+        ylabel("depth (m)")
+    end
+    xlabel("real kernel (nV/m)")
+    title("q = $q As")
+    full_kernel = kern*m0 * 10^9
+    plot(real.(full_kernel), zgrid)
+    gca().invert_yaxis()
+    gca().set_yscale("log")
+end
+display(gcf())
