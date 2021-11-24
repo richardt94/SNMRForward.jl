@@ -220,7 +220,7 @@ for (i_th, θ) = enumerate(thetagrid)
     Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
     kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
-    k1d += dtheta*kernel'*dr
+    k1d += dtheta*transpose(kernel)*dr
 end
 
 ##
@@ -267,7 +267,7 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr)
     #azimuthal integral scale
     dtheta = thetagrid[2] - thetagrid[1]
 
-    k1d = zeros(ComplexF64, size(zgrid)...)
+    k1d = zeros(ComplexF64, size(Hz,2))
 
     for (i_th, θ) = enumerate(thetagrid)
         Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
@@ -277,7 +277,7 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr)
         Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
         kernel = SNMRForward.point_kernel.(q, μ * Hco, μ * Hctr, ζ, ωl)
-        k1d += dtheta*kernel'*dr
+        k1d += dtheta*transpose(kernel)*dr
     end
     k1d
 end
@@ -301,7 +301,7 @@ close(gcf())
 
 ## "log sensitivity" (Fig. 5.5, Hertrich)
 fig, ax = subplots(1,1,figsize=(7,10))
-contourf(qgrid, zgrid, log10.(10^9 * abs.(kq*m0)), levels=[-1,0.1,0.6,1.15,1.8,2.5], cmap="jet")
+contourf(qgrid, zgrid, log10.(10^9 * abs.(kq*m0)), levels=[-1,0.1,0.6,1.15,1.7,2.5], cmap="jet")
 gca().invert_yaxis()
 xlabel("Pulse moment (A s)")
 ylabel("Depth (m)")
@@ -316,7 +316,7 @@ fwd_kernel = kq * m0
 w = zeros(length(zgrid))
 w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
 
-response = fwd_kernel' * w * dz
+response = transpose(fwd_kernel) * w * dz
 
 fig, ax = subplots(1,3, figsize=(15,5))
 sca(ax[1])
@@ -329,7 +329,7 @@ display(gcf())
 w = zeros(length(zgrid))
 w[(zgrid .>= 30) .& (zgrid .<= 45)] .= 1
 
-response = fwd_kernel' * w * dz
+response = transpose(fwd_kernel) * w * dz
 
 sca(ax[2])
 plot(qgrid, real.(response))
@@ -340,7 +340,7 @@ display(gcf())
 w = zeros(length(zgrid))
 w[(zgrid .>= 60) .& (zgrid .<= 80)] .= 1
 
-response = fwd_kernel' * w * dz
+response = transpose(fwd_kernel) * w * dz
 
 sca(ax[3])
 plot(qgrid, real.(response))
