@@ -27,7 +27,7 @@ function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
     (Hz, Hr) = magfields(R, ωl, condLEM.σ, condLEM.d, rgrid, zgrid)
     kq = reduce(hcat, kernel_1d(q, ϕ, ωl, Hz, Hr, rgrid) for q in qgrid)
     dz = zgrid[2:end] - zgrid[1:end-1]
-    k_mat = 0.5 * dz .* (kq[1:end-1, :] .+ kq[2:end,:])
+    k_mat = m0 * 0.5 * dz .* (kq[1:end-1, :] .+ kq[2:end,:])
     MRSForward(k_mat, qgrid, zgrid)
 end
 

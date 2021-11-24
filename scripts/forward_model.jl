@@ -1,15 +1,16 @@
 using Revise, SNMRForward, PyPlot
 
-R = 24
+R = 50
 rgrid = 0.1:0.3:4*R
 zgrid = 0.1*R:1:100
 
 ## conductive half-space, at 2 kHz
-# ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
-Be = 0.000048
-ωl = SNMRForward.γh * 0.000048
+ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
+Be = ωl/SNMRForward.γh
+# Be = 0.000048
+# ωl = SNMRForward.γh * 0.000048
 d = Vector{Float64}()
-σ = [0.02]
+σ = [0.001]
 
 # #define k grid for j0 and j1 kernels
 
@@ -397,14 +398,15 @@ display(gcf())
 
 ## Actually use the defined structs in the package to do forward modelling
 condLEM = SNMRForward.ConductivityModel(σ, d)
-qgrid = [0.1,0.25,0.5,0.75,1,2,3,4,5,6,7,8,9,10,11] .* 2
-ϕ = 2*π/3
+qgrid = [0.1,0.25,0.5,0.75,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+# ϕ = 2*π/3
+ϕ = 13*π/36
 F = SNMRForward.MRSForward(R, zgrid, qgrid, ϕ, Be, condLEM)
 ##
 w = zeros(length(zgrid))
 w[(zgrid .>= 30) .& (zgrid .<= 45)] .= 1
-d = SNMRForward.forward(F,w)
+data = SNMRForward.forward(F,w)
 
 figure()
-plot(qgrid,d)
+plot(qgrid,real.(data))
 display(gcf())
