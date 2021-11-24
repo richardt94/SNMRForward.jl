@@ -7,5 +7,6 @@ include("FieldDecomposition.jl")
 include("HankelFilters.jl")
 include("SNMRKernel.jl")
 include("EquilibriumMagnetisation.jl")
+include("ForwardModelling.jl")
 
 end # module
