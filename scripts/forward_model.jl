@@ -1,16 +1,16 @@
 using Revise, SNMRForward, PyPlot
 
 R = 50
-rgrid = 0.1:0.3:4*R
-zgrid = 0.1*R:1:100
+rgrid = 0.1:1:4*R
+zgrid = 0.1*R:0.1:100
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
 Be = ωl/SNMRForward.γh
 # Be = 0.000048
 # ωl = SNMRForward.γh * 0.000048
-d = [10.0,20.0]
-σ = [0.001,0.05, 0.02]
+d = [20.0,30.0]
+σ = [0.001,0.1, 0.02]
 
 # #define k grid for j0 and j1 kernels
 
@@ -94,7 +94,7 @@ gca().invert_yaxis()
 display(gcf())
 close(gcf())
 ## say the mag. field inclination is 60 degrees. calculate corotating part and phase lag
-ϕ = 12*π/36
+ϕ = 13*π/36
 Hfield_params = SNMRForward.co_counter_field.(Hz, Hr, ϕ, -π/2)
 
 Hco = first.(Hfield_params)

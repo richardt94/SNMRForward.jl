@@ -77,7 +77,7 @@ function phi_coeffs(Bresponse, α, d, zgrid)
     coeff_minus = phi_tops[:,1] .* (1 .+ Bresponse[:,1]./α[:,1])/2
     coeff_plus = 0
     if length(z_interface) > 1
-        coeff_plus = phi_tops[:,2] .* (1 .- Bresponse[:,2]./α[:,2])/2
+        coeff_plus = phi_tops[:,2] .* (1 .- Bresponse[:,2]./α[:,1])/2
     end
     
     h_m = 0
@@ -89,7 +89,7 @@ function phi_coeffs(Bresponse, α, d, zgrid)
             coeff_minus = phi_tops[:,layer_m] .* (1 .+ Bresponse[:,layer_m]./α[:,layer_m])/2
             coeff_plus = 0
             if length(z_interface) > layer_m
-                coeff_plus = phi_tops[:,layer_m+1] .* (1 .- Bresponse[:,layer_m+1]./α[:,layer_m+1])/2
+                coeff_plus = phi_tops[:,layer_m+1] .* (1 .- Bresponse[:,layer_m+1]./α[:,layer_m])/2
             end
             h_m = h_mp1
             h_mp1 = z_interface[layer_m]
