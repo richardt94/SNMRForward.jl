@@ -76,17 +76,19 @@ function phi_coeffs(Bresponse, α, d, zgrid)
     layer_m = 1
     coeff_minus = phi_tops[:,1] .* (1 .+ Bresponse[:,1]./α[:,1])/2
     coeff_plus = 0
-    if length(d) > 1
+    if length(z_interface) > 1
         coeff_plus = phi_tops[:,2] .* (1 .- Bresponse[:,2]./α[:,2])/2
     end
+    
     h_m = 0
     h_mp1 = z_interface[1]
 
     for (iz, z) = enumerate(zgrid)
         if z > h_mp1
+            layer_m += 1
             coeff_minus = phi_tops[:,layer_m] .* (1 .+ Bresponse[:,layer_m]./α[:,layer_m])/2
             coeff_plus = 0
-            if length(d) > layer_m
+            if length(z_interface) > layer_m
                 coeff_plus = phi_tops[:,layer_m+1] .* (1 .- Bresponse[:,layer_m+1]./α[:,layer_m+1])/2
             end
             h_m = h_mp1
@@ -125,13 +127,13 @@ function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVec
 
     ## calculate z = 0 for j0 and j1 kernels
     phif_j0 = SNMRForward.phi_free.(kj0[:], 0, R)
-    phi0_j0 = 2 * kj0[:]./(kj0[:] .+ Bj0) .* phif_j0
+    phi0_j0 = 2 * kj0[:]./(kj0[:] .+ Bj0[:,1]) .* phif_j0
 
     ##
     rj1 = rgrid[use_j1]
     ##
     phif_j1 = reduce(hcat, SNMRForward.phi_free_j1k.(kj1, 0, R, r) for r in rj1)
-    phi0_j1 = 2 * kj1 ./ (kj1 .+ Bj1) .* phif_j1
+    phi0_j1 = 2 * kj1 ./ (kj1 .+ Bj1[:,1]) .* phif_j1
 
     ## propagate through halfspace
     phiz_j0 = phi0_j0 .* phicj0

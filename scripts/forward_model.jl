@@ -9,8 +9,8 @@ zgrid = 0.1*R:1:100
 Be = ωl/SNMRForward.γh
 # Be = 0.000048
 # ωl = SNMRForward.γh * 0.000048
-d = Vector{Float64}()
-σ = [0.001]
+d = [10.0,20.0]
+σ = [0.001,0.05, 0.02]
 
 # #define k grid for j0 and j1 kernels
 
@@ -410,3 +410,5 @@ data = SNMRForward.forward(F,w)
 figure()
 plot(qgrid,real.(data))
 display(gcf())
+
+##
