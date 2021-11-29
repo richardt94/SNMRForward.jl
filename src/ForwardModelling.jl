@@ -3,7 +3,8 @@
 struct MRSForward
     kernel::Matrix{<:Number}      #kernel (precomputed and stored)
     qgrid::AbstractVector{<:Real}
-    zgrid::AbstractVector{<:Real}         #loop radius
+    zgrid::AbstractVector{<:Real}
+    dz::AbstractVector{<:Real}
 end
 
 struct ConductivityModel
@@ -26,15 +27,16 @@ function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
     ωl = γh * Be
     (Hz, Hr) = magfields(R, ωl, condLEM.σ, condLEM.d, rgrid, zgrid)
     kq = reduce(hcat, kernel_1d(q, ϕ, ωl, Hz, Hr, rgrid) for q in qgrid)
-    dz = zgrid[2:end] - zgrid[1:end-1]
-    k_mat = m0 * 0.5 * dz .* (kq[1:end-1, :] .+ kq[2:end,:])
-    MRSForward(k_mat, qgrid, zgrid)
+    dz = zgrid[2:end] .- zgrid[1:end-1]
+    k_mat = m0 .* kq
+    MRSForward(k_mat, qgrid, zgrid, dz)
 end
 
 function forward(F::MRSForward, m::Vector{<:Real})
     #trapezoid integration of the kernel * the model vector
     #volume element is included in the stored kernel
-    m_trap = 0.5*(m[1:end-1] .+ m[2:end])
-    transpose(F.kernel)*m_trap
+    Km = m .* F.kernel
+    println(size(F.dz))
+    transpose(0.5 * transpose(F.dz)*(Km[1:end-1,:] .+ Km[2:end,:]))
 end
 

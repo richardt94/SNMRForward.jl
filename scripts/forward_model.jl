@@ -2,15 +2,15 @@ using Revise, SNMRForward, PyPlot
 
 R = 50
 rgrid = 0.1:1:4*R
-zgrid = 0.1*R:0.1:100
+zgrid = 0.1*R:1:100
 
 ## conductive half-space, at 2 kHz
 ωl = 2*π*2.5e3 #Hz, typical for Earth's field strength
 Be = ωl/SNMRForward.γh
 # Be = 0.000048
 # ωl = SNMRForward.γh * 0.000048
-d = [20.0,30.0]
-σ = [0.001,0.1, 0.02]
+d = Vector{Float64}()#[20.0,30.0]
+σ = [0.001]#,0.1, 0.02]
 
 # #define k grid for j0 and j1 kernels
 
