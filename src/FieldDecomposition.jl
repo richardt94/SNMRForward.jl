@@ -35,3 +35,14 @@ function co_counter_field(Bz, Br, φ, θ)
 
     [Bplus; Bminus; ζ]
 end
+
+#for fields expressed in cartesian coordinates
+#θ is angle between magnetic north and x axis
+#ϕ is inclination
+function perpendicular_field(Bx, By, Bz, ϕ, θ)
+
+end
+
+function co_counter_field(Bx, By, Bz, ϕ, θ)
+    
+end

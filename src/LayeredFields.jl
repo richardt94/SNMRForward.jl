@@ -1,3 +1,5 @@
+using FFTW
+
 ## response function (computes "B-response"/impedance and alpha vals for layered earth)
 RealVector = Vector{T} where T <: Real
 function responses(σ::RealVector, d::RealVector, κ::RealVector, ωl::Real)
@@ -105,7 +107,8 @@ function phi_coeffs(Bresponse, α, d, zgrid)
 end
 
 #spatial-domain magnetic H fields in vertical and radial directions for loop radius R
-function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real}, rgrid::AbstractVector{<:Real}, zgrid::AbstractVector{<:Real})
+function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real},
+    rgrid::AbstractVector{<:Real}, zgrid::AbstractVector{<:Real})
     #define k grid for j0 and j1 kernels
     #j0        
     kj0 = reduce(hcat, Filter_base_801/r for r in rgrid)
@@ -165,4 +168,51 @@ function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVec
     end
     
     (Hz,Hr)
+end
+
+function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real},
+    extent::Real, zgrid::AbstractVector{<:Real}; nxpoints=64)
+    (extent <= 0) && error("horizontal extent must be positive")
+    #exploit the "squareness" of the loop to define an equally-spaced
+    #horizontal grid in x and y and therefore symmetric Fourier transforms
+    #in each dimension
+    xgrid = range(-extent, extent, length=nxpoints)
+    kxgrid = fftshift(π*fftfreq(nxpoints)*(nxpoints - 1)/extent);
+
+    #compute potential at z = 0
+    phif = [phi_free_square(kx, ky, L) for kx = kxgrid, ky = kxgrid]
+
+    #propagate the potential downwards for each k value
+    #save a bit of time by only computing for the 
+    #"upper triangle" of the kx-ky matrix
+    κvals = zeros(nxpoints*(nxpoints+1)÷2)
+    iκ = 1
+    for (ix, kx) = enumerate(kxgrid)
+        for (iy, ky) = enumerate(kxgrid[ix:end])
+            κvals[iκ] = sqrt(kx^2 + ky^2)
+            iκ += 1
+        end
+    end
+
+    B, α = responses(σ, d, κvals, ω)
+    phic, phip = phi_coeffs(B, α, d, zgrid)
+
+    #preallocate the cube
+    phi_k = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+    phip_k = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+
+    for ix = 0:nxpoints-1, iy=0:nxpoints-1
+        i = minimum((ix,iy))
+        j = maximum((ix,iy))
+        iκ = i*(nxpoints - 1) - i*(i-1)÷2 + j + 1
+        κ = κvals[iκ]
+        phi0 = phif[ix+1,iy+1] * 2 * κ / (κ + B[iκ,1])
+        phi_k[ix+1,iy+1,:] = phic[iκ,:] * phi0
+        phip_k[ix+1,iy+1,:] = phip[iκ,:] * phi0
+    end
+
+    phi_k, phip_k
+
+    #todo: compute Hx, Hy, Hz in Fourier space and 
+
 end
