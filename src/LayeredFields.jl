@@ -171,7 +171,7 @@ function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVec
 end
 
 function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real},
-    extent::Real, zgrid::AbstractVector{<:Real}; nxpoints=64)
+    extent::Real, zgrid::AbstractVector{<:Real}; nxpoints=512)
     (extent <= 0) && error("horizontal extent must be positive")
     #exploit the "squareness" of the loop to define an equally-spaced
     #horizontal grid in x and y and therefore symmetric Fourier transforms
@@ -197,22 +197,33 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
     B, α = responses(σ, d, κvals, ω)
     phic, phip = phi_coeffs(B, α, d, zgrid)
 
-    #preallocate the cube
-    phi_k = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
-    phip_k = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+    #compute Hx, Hy, Hz in Fourier space and
+    #invert the 2D transform
 
-    for ix = 0:nxpoints-1, iy=0:nxpoints-1
+    Hz = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+    Hx = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+    Hy = zeros(ComplexF64, nxpoints, nxpoints, length(zgrid))
+
+    #Hz, Hx, Hy are all in 2-D Fourier space (not Hankel)
+    for ix = 0:nxpoints-1, iy = 0:nxpoints-1
         i = minimum((ix,iy))
         j = maximum((ix,iy))
         iκ = i*(nxpoints - 1) - i*(i-1)÷2 + j + 1
         κ = κvals[iκ]
+        if κ == 0 #all field components are zero for zero wavenumber
+            continue
+        end
+
         phi0 = phif[ix+1,iy+1] * 2 * κ / (κ + B[iκ,1])
-        phi_k[ix+1,iy+1,:] = phic[iκ,:] * phi0
-        phip_k[ix+1,iy+1,:] = phip[iκ,:] * phi0
+        Hz[ix+1,iy+1,:] = κ^2 * phi0 * phic[iκ,:]
+        Hx[ix+1,iy+1,:] = -im * kxgrid[ix+1] * phi0 * phip[iκ,:]
+        Hy[ix+1,iy+1,:] = -im * kxgrid[iy+1] * phi0 * phip[iκ,:]
     end
 
-    phi_k, phip_k
+    Hz = fftshift(ifft!(ifftshift(Hz, (1,2)), (1,2)),(1,2))
+    Hx = fftshift(ifft!(ifftshift(Hx, (1,2)), (1,2)),(1,2))
+    Hy = fftshift(ifft!(ifftshift(Hy, (1,2)), (1,2)),(1,2))
 
-    #todo: compute Hx, Hy, Hz in Fourier space and 
+    Hz,Hx,Hy
 
 end
