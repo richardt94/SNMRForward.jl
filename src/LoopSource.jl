@@ -19,5 +19,5 @@ end
 #hankel transforms. Will instead need to use 2-D FFTs
 function phi_free_square(kx, ky, L)
     κ = sqrt(kx^2 + ky^2)
-    L^2/(2*π^2*κ) * sinc(π*kx*L) * sinc(π*ky*L)
+    L^2/(2*π^2*κ) * sinc(kx*L/π) * sinc(π*ky*L/π)
 end

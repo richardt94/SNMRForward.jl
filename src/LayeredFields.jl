@@ -171,13 +171,14 @@ function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVec
 end
 
 function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real},
-    extent::Real, zgrid::AbstractVector{<:Real}; nxpoints=512)
+    extent::Real, zgrid::AbstractVector{<:Real}; nxpoints=64)
     (extent <= 0) && error("horizontal extent must be positive")
     #exploit the "squareness" of the loop to define an equally-spaced
     #horizontal grid in x and y and therefore symmetric Fourier transforms
     #in each dimension
-    xgrid = range(-extent, extent, length=nxpoints)
-    kxgrid = fftshift(π*fftfreq(nxpoints)*(nxpoints - 1)/extent);
+    δx = extent/(nxpoints ÷ 2);
+    xgrid = -extent:δx:(-extent+(nxpoints-1)*δx);
+    kxgrid = 2*π*fftshift(fftfreq(nxpoints,1/δx));
 
     #compute potential at z = 0
     phif = [phi_free_square(kx, ky, L) for kx = kxgrid, ky = kxgrid]
@@ -220,10 +221,10 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
         Hy[ix+1,iy+1,:] = -im * kxgrid[iy+1] * phi0 * phip[iκ,:]
     end
 
-    Hz = fftshift(ifft!(ifftshift(Hz, (1,2)), (1,2)),(1,2))
-    Hx = fftshift(ifft!(ifftshift(Hx, (1,2)), (1,2)),(1,2))
-    Hy = fftshift(ifft!(ifftshift(Hy, (1,2)), (1,2)),(1,2))
+    Hz = fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
+    Hx = fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
+    Hy = fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
 
-    Hz,Hx,Hy
+    Hx,Hy,Hz,xgrid,kxgrid
 
 end
