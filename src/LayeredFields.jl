@@ -62,6 +62,8 @@ end
 
 #propagation coefficients in a layered earth
 #multiply these by field values at z = 0
+#TODO this can probably be simplified
+#also will break if α = 0 (e.g. zero conductivity and zero wavenumber)
 function phi_coeffs(Bresponse, α, d, zgrid)
     #schelkunoff potential at the top of each layer
     phi_tops = zeros(ComplexF64, size(Bresponse)...)
@@ -107,6 +109,7 @@ function phi_coeffs(Bresponse, α, d, zgrid)
 end
 
 #spatial-domain magnetic H fields in vertical and radial directions for loop radius R
+#TODO make this use more direct/stable Hz and Hr coefficients at z=0
 function magfields(R::Real, ω::Real, σ::AbstractVector{<:Real}, d::AbstractVector{<:Real},
     rgrid::AbstractVector{<:Real}, zgrid::AbstractVector{<:Real})
     #define k grid for j0 and j1 kernels
@@ -181,7 +184,7 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
     kxgrid = 2*π*fftshift(fftfreq(nxpoints,1/δx));
 
     #compute potential at z = 0
-    phif = [phi_free_square(kx, ky, L) for kx = kxgrid, ky = kxgrid]
+    κφf = [κφ_square(kx, ky, L) for kx = kxgrid, ky = kxgrid]
 
     #propagate the potential downwards for each k value
     #save a bit of time by only computing for the 
@@ -211,19 +214,19 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
         j = maximum((ix,iy))
         iκ = i*(nxpoints - 1) - i*(i-1)÷2 + j + 1
         κ = κvals[iκ]
-        if κ == 0 #all field components are zero for zero wavenumber
+        if i == nxpoints÷2 && j == nxpoints÷2
             continue
         end
-
-        phi0 = phif[ix+1,iy+1] * 2 * κ / (κ + B[iκ,1])
-        Hz[ix+1,iy+1,:] = κ^2 * phi0 * phic[iκ,:]
-        Hx[ix+1,iy+1,:] = -im * kxgrid[ix+1] * phi0 * phip[iκ,:]
-        Hy[ix+1,iy+1,:] = -im * kxgrid[iy+1] * phi0 * phip[iκ,:]
+        
+        κφ0 = κφf[ix+1,iy+1] * 2 / (κ + B[iκ,1])
+        Hz[ix+1,iy+1,:] = κ^2 * κφ0 * phic[iκ,:]
+        Hx[ix+1,iy+1,:] = im * kxgrid[ix+1] * κφ0 * phip[iκ,:]
+        Hy[ix+1,iy+1,:] = im * kxgrid[iy+1] * κφ0 * phip[iκ,:]
     end
 
-    Hz = fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
-    Hx = fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
-    Hy = fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
+    Hz = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
+    Hx = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
+    Hy = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
 
     Hx,Hy,Hz,xgrid,kxgrid
 

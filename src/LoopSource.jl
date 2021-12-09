@@ -21,3 +21,12 @@ function phi_free_square(kx, ky, L)
     κ = sqrt(kx^2 + ky^2)
     L^2/(2*π^2*κ) * sinc(kx*L/π) * sinc(ky*L/π)
 end
+
+#non-diverging quantity for Hz, Hx calc
+#should improve numerical stability to avoid
+#repeated multiplication and division by small κ values
+function κφ_square(kx, ky, L)
+    κ = sqrt(kx^2 + ky^2)
+    L^2/(2*π^2) * sinc(kx*L/π) * sinc(ky*L/π)
+end
+

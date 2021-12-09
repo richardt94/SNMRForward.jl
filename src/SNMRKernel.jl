@@ -31,3 +31,9 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr, rgrid; n_theta_points = 100)
     end
     k1d
 end
+
+#for use with cartesian coordinates and known declination
+#θ between the x direction and mag. north
+function kernel_1d(q, ϕ, θ, ωl, Hx, Hy, Hz, xgrid, zgrid)
+    
+end
