@@ -15,13 +15,13 @@ function kernel_1d(q, ϕ, ωl, Hz, Hr, rgrid; n_theta_points = 100)
     k1d = zeros(ComplexF64, size(Hz,2))
 
     for (i_th, θ) = enumerate(thetagrid)
-        Hparams = SNMRForward.co_counter_field.(Hz, Hr, ϕ, θ)
+        Hparams = co_counter_field.(Hz, Hr, ϕ, θ)
 
         Hco = first.(Hparams)
         ζ = last.(Hparams)
         Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
 
-        kernel = SNMRForward.point_kernel.(q, μ0 * Hco, μ0 * Hctr, ζ, ωl)
+        kernel = point_kernel.(q, μ0 * Hco, μ0 * Hctr, ζ, ωl)
         rkr = rgrid .* kernel
         if i_th == 1 || i_th == length(thetagrid)
             k1d += 0.25 * dtheta*transpose(rkr[1:end-1,:] .+ rkr[2:end,:])*dr
@@ -34,6 +34,20 @@ end
 
 #for use with cartesian coordinates and known declination
 #θ between the x direction and mag. north
-function kernel_1d(q, ϕ, θ, ωl, Hx, Hy, Hz, xgrid, zgrid)
-    
+function kernel_1d(q, ϕ, θ, ωl, Hx, Hy, Hz, xgrid)
+    Hparams = co_counter_field.(Hx, Hy, Hz, ϕ, θ)
+
+    Hco = first.(Hparams)
+    ζ = last.(Hparams)
+    Hctr = reshape([a[2] for a in Hparams[:]], size(Hco)...)
+
+    kernel = point_kernel.(q, μ0*Hco, μ0*Hctr, ζ, ωl)
+    dx = xgrid[2:end] .- xgrid[1:end-1]
+    trap_kern = 0.25 * (kernel[1:end-1, 1:end-1, :] .+
+                        kernel[2:end, 1:end-1, :] .+
+                        kernel[1:end-1, 2:end, :] .+
+                        kernel[2:end, 2:end, :])
+
+    k1d = sum(dx .* transpose(dx) .* trap_kern, dims=[1,2])
+    k1d[:]
 end

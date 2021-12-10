@@ -192,7 +192,7 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
     κvals = zeros(nxpoints*(nxpoints+1)÷2)
     iκ = 1
     for (ix, kx) = enumerate(kxgrid)
-        for (iy, ky) = enumerate(kxgrid[ix:end])
+        for ky = kxgrid[ix:end]
             κvals[iκ] = sqrt(kx^2 + ky^2)
             iκ += 1
         end
@@ -214,9 +214,9 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
         j = maximum((ix,iy))
         iκ = i*(nxpoints - 1) - i*(i-1)÷2 + j + 1
         κ = κvals[iκ]
-        if i == nxpoints÷2 && j == nxpoints÷2
-            continue
-        end
+        # if i == nxpoints÷2 && j == nxpoints÷2
+        #     continue
+        # end
         
         κφ0 = κφf[ix+1,iy+1] * 2 / (κ + B[iκ,1])
         Hz[ix+1,iy+1,:] = κ^2 * κφ0 * phic[iκ,:]
@@ -224,9 +224,9 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
         Hy[ix+1,iy+1,:] = im * kxgrid[iy+1] * κφ0 * phip[iκ,:]
     end
 
-    Hz = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
-    Hx = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
-    Hy = 1/(nxpoints^2) * fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
+    Hz = nxpoints^2 * fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
+    Hx = nxpoints^2 * fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
+    Hy = nxpoints^2 * fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
 
     Hx,Hy,Hz,xgrid,kxgrid
 
