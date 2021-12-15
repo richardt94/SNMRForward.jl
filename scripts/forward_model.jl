@@ -1,4 +1,4 @@
-using Revise, SNMRForward, PyPlot
+using SNMRForward, PyPlot
 
 R = 50
 rgrid = 0.1:1:4*R
@@ -411,4 +411,44 @@ figure()
 plot(qgrid,real.(data))
 display(gcf())
 
+##
+
+
+w = zeros(length(zgrid))
+w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
+response = SNMRForward.forward(F,w)
+
+fig, ax = subplots(1,3, figsize=(15,5))
+sca(ax[1])
+plot(qgrid, real.(response))
+title("Saturated layer 10 - 20 m")
+ylabel("Response voltage (V)")
+xlabel("Pulse moment (A s)")
+gca().ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+display(gcf())
+## 30 - 45 m
+w = zeros(length(zgrid))
+w[(zgrid .>= 30) .& (zgrid .<= 45)] .= 1
+
+response = SNMRForward.forward(F,w)
+
+sca(ax[2])
+plot(qgrid, real.(response))
+title("Saturated layer 30 - 45 m")
+xlabel("Pulse moment (A s)")
+gca().ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+display(gcf())
+## 60 - 80 m
+w = zeros(length(zgrid))
+w[(zgrid .>= 60) .& (zgrid .<= 80)] .= 1
+
+response = SNMRForward.forward(F,w)
+
+sca(ax[3])
+plot(qgrid, real.(response))
+title("Saturated layer 60 - 80 m")
+xlabel("Pulse moment (A s)")
+gca().ticklabel_format(axis="y", style="sci", scilimits=(0,0))
+display(gcf())
+savefig("Forwards.png")
 ##

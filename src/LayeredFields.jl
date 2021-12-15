@@ -224,9 +224,9 @@ function magfields_square(L::Real, ω::Real, σ::AbstractVector{<:Real}, d::Abst
         Hy[ix+1,iy+1,:] = im * kxgrid[iy+1] * κφ0 * phip[iκ,:]
     end
 
-    Hz = nxpoints^2 * fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
-    Hx = nxpoints^2 * fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
-    Hy = nxpoints^2 * fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
+    Hz = δx^(-2) * fftshift(ifft(ifftshift(Hz, (1,2)), (1,2)),(1,2))
+    Hx = δx^(-2) * fftshift(ifft(ifftshift(Hx, (1,2)), (1,2)),(1,2))
+    Hy = δx^(-2) * fftshift(ifft(ifftshift(Hy, (1,2)), (1,2)),(1,2))
 
     Hx,Hy,Hz,xgrid,kxgrid
 

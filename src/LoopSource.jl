@@ -14,12 +14,17 @@ function phi_free_j1k(κ, z, R, r)
     (R * besselj0(κ * r) ./ (2 * κ^2)) * exp(-κ*z)
 end
 
+#TODO I've added a fudge factor of 4*pi^2 here to match
+#results for a circular loop - I think this is due to differences
+#between my FT convention and that used by W&H but this needs to be
+#verified
+
 #Square loop (see, e.g., W&H Eq. 4.77)
 #note that this is not cylindrically symmetric so we can't use
 #hankel transforms. Will instead need to use 2-D FFTs
 function phi_free_square(kx, ky, L)
     κ = sqrt(kx^2 + ky^2)
-    L^2/(2*π^2*κ) * sinc(kx*L/π) * sinc(ky*L/π)
+    2 * L^2/(κ) * sinc(kx*L/π) * sinc(ky*L/π)
 end
 
 #non-diverging quantity for Hz, Hx calc
@@ -27,6 +32,6 @@ end
 #repeated multiplication and division by small κ values
 function κφ_square(kx, ky, L)
     κ = sqrt(kx^2 + ky^2)
-    L^2/(2*π^2) * sinc(kx*L/π) * sinc(ky*L/π)
+    2 * L^2 * sinc(kx*L/π) * sinc(ky*L/π)
 end
 

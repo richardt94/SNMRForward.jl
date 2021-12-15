@@ -32,11 +32,25 @@ function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
     MRSForward(k_mat, qgrid, zgrid, dz)
 end
 
+function MRSForward_square(L::Real, zgrid::AbstractVector{<:Real},
+    qgrid::AbstractVector{<:Real}, ϕ::Real, θ::Real, Be::Real,
+    condLEM::ConductivityModel; nxpoints = 128, temp=300.0)
+    L <= 0 && error("loop side length must be positive")
+    m0 = mag_factor(temp) * Be
+    ωl = γh * Be
+    (Hx, Hy, Hz, xgrid, _) = magfields_square(L, ωl, condLEM.σ, condLEM.d, 4*L, zgrid;
+                                nxpoints = nxpoints)
+
+    kq = reduce(hcat, kernel_1d(q, ϕ, θ, ωl, Hx, Hy, Hz, xgrid) for q in qgrid)
+    dz = zgrid[2:end] .- zgrid[1:end-1]
+    k_mat = m0 .* kq
+    MRSForward(k_mat, qgrid, zgrid, dz)
+end
+
 function forward(F::MRSForward, m::Vector{<:Real})
     #trapezoid integration of the kernel * the model vector
     #volume element is included in the stored kernel
     Km = m .* F.kernel
-    println(size(F.dz))
     transpose(0.5 * transpose(F.dz)*(Km[1:end-1,:] .+ Km[2:end,:]))
 end
 
