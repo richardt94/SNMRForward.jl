@@ -14,6 +14,10 @@ function phi_free_j1k(κ, z, R, r)
     (R * besselj0(κ * r) ./ (2 * κ^2)) * exp(-κ*z)
 end
 
+#can propagate H fields directly using propagation coeffs for ϕ
+#and ϕ'
+H_free(κ, R) = R * besselj1(κ*R)/2
+
 #TODO I've added a fudge factor of 4*pi^2 here to match
 #results for a circular loop - I think this is due to differences
 #between my FT convention and that used by W&H but this needs to be
