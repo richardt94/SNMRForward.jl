@@ -155,24 +155,25 @@ d = Vector{Float64}()
 σ = [0.001]
 ωl = 2*π*2.5e3
 R = 50
-zgrid = 10 .^(-2:0.05:0.5)
+zgrid = R * 10 .^(-2:0.05:0.5)
 ##
-function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 150)
+function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50)
     x, w = gausslegendre(quad_order)
     b_roots = [0; approx_besselroots(1, 150)/R]
     scaler = (b_roots[2:end] .- b_roots[1:end-1])/2
     nr = length(rs)
     nz = length(zs)
     Hz = zeros(Complex, nr,nz)
-    ks = reduce(vcat, [(x .+ 1)/2 * (b-a) .+ b for (a,b) in zip(b_roots[1:end-1], b_roots[2:end])])
+    ks = reduce(vcat, [(x .+ 1)/2 * (b-a) .+ a for (a,b) in zip(b_roots[1:end-1], b_roots[2:end])])
+    
     #precompute layer responses for each k
     B, α = SNMRForward.responses(σ, d, ks, ωl)
     phi, phip = SNMRForward.phi_coeffs(B, α, d, zs)
     ##
     for (ir, r) = enumerate(rs)
         #integrand to compute magnetic field in free space at z = 0
-        free_integrand(k) = SNMRForward.H_free(k, R) * besselj0(k*r)
-        for (iz, z) = enumerate(zs)
+        free_integrand(k) = k * SNMRForward.H_free(k, R) * besselj0(k*r)
+        for iz = 1:nz
             psums = NaN * ones(Complex, max_zero)
             epsilon = NaN * ones(Complex, max_zero, max_zero)
             function integrate(iq)
@@ -220,5 +221,5 @@ function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 150)
 end
 
 ##
-Hz = calc_H(0.01:0.02:2, zgrid, R, σ, d, ωl)
+Hz = calc_H(0.01*R:0.02*R:2*R, zgrid, R, σ, d, ωl)
 ##
