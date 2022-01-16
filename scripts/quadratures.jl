@@ -155,7 +155,8 @@ d = Vector{Float64}()
 σ = [0.001]
 ωl = 2*π*2.5e3
 R = 50
-zgrid = R * 10 .^(-2:0.05:0.5)
+rgrid = 0.01*R:0.02*R:2*R
+zgrid = R * 10 .^(-2:0.05:0.25)
 ##
 function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50)
     x, w = gausslegendre(quad_order)
@@ -221,5 +222,10 @@ function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50)
 end
 
 ##
-Hz = calc_H(0.01*R:0.02*R:2*R, zgrid, R, σ, d, ωl)
+Hz = calc_H(rgrid, zgrid, R, σ, d, ωl)
+##
+figure()
+pcolor(rgrid, zgrid, real.(transpose(Hz)), vmin=-0.02, vmax=0.02)
+gca().invert_yaxis()
+gcf()
 ##
