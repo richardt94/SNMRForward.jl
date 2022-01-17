@@ -66,7 +66,7 @@ rgrid = 0.01:0.01:2
 ##
 # gcf()
 ##
-close("all")
+# close("all")
 ##
 result = psum_kern.(Hz_wavenumber, besselj0, rgrid, 1)
 ##
@@ -155,77 +155,149 @@ d = Vector{Float64}()
 σ = [0.001]
 ωl = 2*π*2.5e3
 R = 50
-rgrid = 0.01*R:0.02*R:2*R
-zgrid = R * 10 .^(-2:0.05:0.25)
+rgrid = 0.01*R:0.02*R:4*R
+zgrid = R * 10 .^(-2:0.05:0.4)
 ##
-function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50)
+function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50, tol=1e-7)
     x, w = gausslegendre(quad_order)
     b_roots = [0; approx_besselroots(1, 150)/R]
     scaler = (b_roots[2:end] .- b_roots[1:end-1])/2
     nr = length(rs)
     nz = length(zs)
     Hz = zeros(Complex, nr,nz)
+    Hr = zeros(Complex, nr,nz)
     ks = reduce(vcat, [(x .+ 1)/2 * (b-a) .+ a for (a,b) in zip(b_roots[1:end-1], b_roots[2:end])])
     
     #precompute layer responses for each k
     B, α = SNMRForward.responses(σ, d, ks, ωl)
     phi, phip = SNMRForward.phi_coeffs(B, α, d, zs)
+    #reflection coefficient at first interface
+    rte = 2 * ks ./ (ks .+ B[:,1])
     ##
     for (ir, r) = enumerate(rs)
         #integrand to compute magnetic field in free space at z = 0
-        free_integrand(k) = k * SNMRForward.H_free(k, R) * besselj0(k*r)
+        free_integrand_z(k) = k * SNMRForward.H_free(k, R) * besselj0(k*r)
+        free_integrand_r(k) = - SNMRForward.H_free(k, R) * besselj1(k*r)
         for iz = 1:nz
-            psums = NaN * ones(Complex, max_zero)
-            epsilon = NaN * ones(Complex, max_zero, max_zero)
-            function integrate(iq)
+            psums = NaN * ones(Complex, max_zero, 2)
+            epsilon = NaN * ones(Complex, max_zero, max_zero, 2)
+            function integrate(iq, isz)
                 slice = (iq*quad_order+1):(iq+1)*quad_order
-                scaler[iq+1] * transpose(w) * 
-                    (free_integrand.(ks[slice]) .* phi[slice,iz])
+                scaler[iq+1] * transpose(w .* rte[slice]) * (isz ?
+                    (free_integrand_z.(ks[slice]) .* phi[slice,iz])
+                    :
+                    (free_integrand_r.(ks[slice]) .* phip[slice,iz]))
             end
-            psums[1] = integrate(0)
+            psums[1,1] = integrate(0, false)
+            psums[1,2] = integrate(0, true)
 
-            function calc_eps(i,j)
-                ~isnan(epsilon[i+1,j+1]) && return epsilon[i+1,j+1]
+            function calc_eps(i,j,isz)
+                ~isnan(epsilon[i+1,j+1,isz+1]) && return epsilon[i+1,j+1,isz+1]
                 if j == 0
-                    if isnan(psums[i+1])
-                        psums[i+1] = psums[i] + integrate(i)
+                    if isnan(psums[i+1,isz+1])
+                        psums[i+1,isz+1] = psums[i,isz+1] + integrate(i,isz)
                     end
-                    epsilon[i+1,1] = psums[i+1]
+                    epsilon[i+1,1,isz+1] = psums[i+1,isz+1]
                 elseif j == 1
-                    epsilon[i+1,2] = 1/(calc_eps(i+1,0) - calc_eps(i,0))
+                    epsilon[i+1,2,isz+1] = 1/(calc_eps(i+1,0,isz) - calc_eps(i,0,isz))
                 else
-                    epsilon[i+1,j+1] = calc_eps(i+1, j-2) + 1/(calc_eps(i+1,j-1) - calc_eps(i,j-1))
+                    epsilon[i+1,j+1,isz+1] = 
+                        calc_eps(i+1,j-2,isz) + 1/(calc_eps(i+1,j-1,isz) - calc_eps(i,j-1,isz))
                 end
-                return epsilon[i+1,j+1]
+                return epsilon[i+1,j+1,isz+1]
             end
 
-            os = 0
-            s = 0
-            tol = 1e-6
-            for i=0:(max_zero-1)
-                if i%2 == 0
-                    s = calc_eps(0,i)
-                else
-                    s = calc_eps(1,i-1)
+            function adaptive_shanks(isz)
+                os = 0
+                s = 0
+                for i=0:(max_zero-1)
+                    if i%2 == 0
+                        s = calc_eps(0,i,isz)
+                    else
+                        s = calc_eps(1,i-1,isz)
+                    end
+            
+                    abs((s - os)/s) < tol && break
+                    
+                    os = s
                 end
-        
-                abs((s - os)/s) < tol && break
-                
-                os = s
+                s
             end
-            Hz[ir,iz] = s
 
+            Hz[ir,iz] = adaptive_shanks(true)
+            Hr[ir,iz] = adaptive_shanks(false)
         end
     end
 
-    Hz    
+    Hz, Hr
 end
 
 ##
-Hz = calc_H(rgrid, zgrid, R, σ, d, ωl)
+@time Hz, Hr = calc_H(rgrid, zgrid, R, σ, d, ωl; quad_order=16)
+##
+@time (Hz_df, Hr_df) = SNMRForward.magfields(R, ωl, σ, d, rgrid, zgrid)
+##
+Hz_rd = abs.((Hz .- Hz_df)./Hz)
+Hr_rd = abs.((Hr .- Hr_df)./Hr)
+##
+fig, ax = subplots(3,2, figsize=(10,15))
+sca(ax[1,1])
+pcolor(rgrid, zgrid, real.(transpose(Hz)), vmin=-0.02, vmax=0.02)
+title("Hz QWE")
+sca(ax[1,2])
+pcolor(rgrid, zgrid, real.(transpose(Hz_df)), vmin=-0.02, vmax=0.02)
+title("Hz dig filter")
+sca(ax[2,1])
+pcolor(rgrid, zgrid, real.(transpose(Hr)), vmin=-0.02, vmax=0.02)
+title("Hr QWE")
+sca(ax[2,2])
+pcolor(rgrid, zgrid, real.(transpose(Hr_df)), vmin=-0.02, vmax=0.02)
+title("Hr dig filter")
+sca(ax[3,1])
+pcolor(rgrid, zgrid, real.(transpose(Hz_rd)), vmin=0, vmax=0.05)
+title("Hz difference")
+sca(ax[3,2])
+pcolor(rgrid, zgrid, real.(transpose(Hr_rd)), vmin=0, vmax=0.05)
+title("Hr difference")
+
+
+for a in ax[:]
+    sca(a)
+    a.invert_yaxis()
+    xlabel("r (m)")
+    ylabel("z (m)")
+end
+gcf()
+##
+# 1d kernels
+qs = [0.1,0.25,0.5,0.75,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+k1d = reduce(hcat, [SNMRForward.kernel_1d(q, 65*π/180, ωl, Hz, Hr, rgrid; n_theta_points=250) for q in qs])
+k1d_df = reduce(hcat, [SNMRForward.kernel_1d(q, 65*π/180, ωl, Hz_df, Hr_df, rgrid; n_theta_points=250) for q in qs])
 ##
 figure()
-pcolor(rgrid, zgrid, real.(transpose(Hz)), vmin=-0.02, vmax=0.02)
+plot(k1d[:,5],zgrid)
+plot(k1d_df[:,5],zgrid)
+ylim([1,maximum(zgrid)])
 gca().invert_yaxis()
+gca().set_yscale("log")
+gcf()
+gcf()
+##
+close("all")
+##
+# forward modelling with qwe and digital filter kernels
+m0 = SNMRForward.mag_factor(300) * ωl / SNMRForward.γh
+F = SNMRForward.MRSForward(m0 * k1d, qs, zgrid, zgrid[2:end] .- zgrid[1:end-1])
+F_df = SNMRForward.MRSForward(m0 * k1d_df, qs, zgrid, zgrid[2:end] .- zgrid[1:end-1])
+##
+w = zeros(length(zgrid))
+w[(zgrid .>= 10) .& (zgrid .<= 20)] .= 1
+w
+V = SNMRForward.forward(F,w)
+V_df = SNMRForward.forward(F_df, w)
+##
+figure()
+plot(qs, real.(V))
+plot(qs, real.(V_df))
 gcf()
 ##
