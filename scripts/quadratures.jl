@@ -1,6 +1,6 @@
 using FastGaussQuadrature, SpecialFunctions, PyPlot, Elliptic
 ##
-x, w = gausslegendre(8)
+x, w = gausslegendre(10)
 f(x) = x^4
 transpose(w)*f.(x) ≈ 2/5
 ##
@@ -60,7 +60,7 @@ function psum_kern(fk, kern, r, R)
     s
 end
 ##
-rgrid = 0.01:0.01:2
+rgrid = 0.01:0.01:4
 # figure()
 # plot(rgrid, psum_j0.(Hz_wavenumber, rgrid))
 ##
@@ -117,36 +117,101 @@ plot(rgrid, result_Hr)
 plot(rgrid, result_analytic_Hr)
 gcf()
 ## 2D results
-zgrid = 10 .^(-2:0.05:0.5)
+zgrid = 10 .^(-2:0.025:0.5)
 Hz2d = reduce(hcat, collect(psum_kern.(k -> Hz_wavenumber(k,z), besselj0, rgrid, 1) for z in zgrid))
 Hr2d = reduce(hcat, collect(psum_kern.(k -> Hr_wavenumber(k,z), besselj1, rgrid, 1) for z in zgrid))
 Hza2d = [Hz_analytic(r,z) for r in rgrid, z in zgrid]
 Hra2d = [Hr_analytic(r,z) for r in rgrid, z in zgrid]
+
+Hz_rel = abs.((Hz2d .- Hza2d)./Hza2d)
+Hr_rel = abs.((Hr2d .- Hra2d)./Hra2d)
+
+##
+
+Hzdf2d, Hrdf2d = SNMRForward.magfields(1, 1, [0.0], Vector{Float64}(), rgrid, zgrid)
+
+Hzdf_rel = abs.((Hzdf2d .- Hza2d)./Hza2d)
+Hrdf_rel = abs.((Hrdf2d .- Hra2d)./Hra2d)
 ##
 clip = 0.4
-fig,ax = subplots(2,2, figsize=(10,10))
+fig,ax = subplots(3,2, figsize=(8,12), constrained_layout=true)
+cmap = "bwr"
 sca(ax[1,1])
-pcolor(rgrid, zgrid, transpose(Hz2d), vmin=-clip, vmax=clip)
+pcolormesh(rgrid, zgrid, transpose(real.(Hz2d)), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
 gca().invert_yaxis()
 title("QWE Hz")
-sca(ax[1,2])
-pcolor(rgrid, zgrid, transpose(Hza2d), vmin=-clip, vmax=clip)
+sca(ax[2,1])
+pcolormesh(rgrid, zgrid, transpose(Hza2d), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
 gca().invert_yaxis()
 title("analytic Hz")
-sca(ax[2,1])
-pcolor(rgrid, zgrid, transpose(Hr2d), vmin=-clip, vmax=clip)
+sca(ax[1,2])
+pcolormesh(rgrid, zgrid, transpose(real.(Hr2d)), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
 gca().invert_yaxis()
 title("QWE Hr")
 sca(ax[2,2])
-pcolor(rgrid, zgrid, transpose(Hra2d), vmin=-clip, vmax=clip)
+pcolormesh(rgrid, zgrid, transpose(Hra2d), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
 gca().invert_yaxis()
 title("analytic Hr")
+colorbar(ax=ax[1:2,:],location="bottom", label = "\$H/(IR)\$ (m\$^{-2}\$)")
+sca(ax[3,1])
+pcolormesh(rgrid, zgrid, transpose(Hz_rel), vmin=0, vmax=0.05, shading="gouraud")
+gca().invert_yaxis()
+title("Hz rel error")
+sca(ax[3,2])
+pcolormesh(rgrid, zgrid, transpose(Hr_rel), vmin=0, vmax=0.05, shading="gouraud")
+gca().invert_yaxis()
+title("Hr rel error")
+colorbar(ax=ax[3,:],location="bottom", label="relative error")
 for a in ax[:]
     sca(a)
     xlabel("r/R")
     ylabel("z/R")
 end
 gcf()
+##
+clip = 0.4
+fig,ax = subplots(3,2, figsize=(8,12), constrained_layout=true)
+cmap = "bwr"
+sca(ax[1,1])
+pcolormesh(rgrid, zgrid, transpose(real.(Hzdf2d)), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
+gca().invert_yaxis()
+title("digital filter Hz")
+sca(ax[2,1])
+pcolormesh(rgrid, zgrid, transpose(Hza2d), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
+gca().invert_yaxis()
+title("analytic Hz")
+sca(ax[1,2])
+pcolormesh(rgrid, zgrid, transpose(real.(Hrdf2d)), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
+gca().invert_yaxis()
+title("digital filter Hr")
+sca(ax[2,2])
+pcolormesh(rgrid, zgrid, transpose(Hra2d), vmin=-clip, vmax=clip, cmap=cmap, shading="gouraud")
+gca().invert_yaxis()
+title("analytic Hr")
+colorbar(ax=ax[1:2,:],location="bottom", label = "\$H/(IR)\$ (m\$^{-2}\$)")
+sca(ax[3,1])
+pcolormesh(rgrid, zgrid, transpose(Hzdf_rel), vmin=0, vmax=0.05, shading="gouraud")
+gca().invert_yaxis()
+title("Hz rel error")
+sca(ax[3,2])
+pcolormesh(rgrid, zgrid, transpose(Hrdf_rel), vmin=0, vmax=0.05, shading="gouraud")
+gca().invert_yaxis()
+title("Hr rel error")
+colorbar(ax=ax[3,:],location="bottom", label="relative error")
+for a in ax[:]
+    sca(a)
+    xlabel("r/R")
+    ylabel("z/R")
+end
+gcf()
+##
+maximum(Hz_rel)
+##
+argmax(Hz_rel)
+##
+maximum(Hr_rel)
+##
+argmax(Hr_rel)
 ##
 # design a way of actually evaluating a messier forward with QWE
 # starting with params needed for LE formulation
@@ -233,7 +298,7 @@ function calc_H(rs, zs, R, σ, d, ωl; quad_order = 8, max_zero = 50, tol=1e-7)
 end
 
 ##
-@time Hz, Hr = calc_H(rgrid, zgrid, R, σ, d, ωl; quad_order=16)
+@time Hz, Hr = calc_H(rgrid, zgrid, R, σ, d, ωl; quad_order=11)
 ##
 @time (Hz_df, Hr_df) = SNMRForward.magfields(R, ωl, σ, d, rgrid, zgrid)
 ##
