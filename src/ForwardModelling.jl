@@ -17,7 +17,8 @@ end
 
 function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
     qgrid::AbstractVector{<:Real}, ϕ::Real, Be::Real,
-    condLEM::ConductivityModel; nrvals = 200, temp=300.0)
+    condLEM::ConductivityModel; nrvals = 200, temp=300.0,
+    qwe=true)
     #radial evaluation values
     R <= 0 && error("loop radius must be positive")
     rmin = 0.01*R
@@ -25,7 +26,10 @@ function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
     rgrid = range(rmin, stop=rmax, length=nrvals)
     m0 = mag_factor(temp) * Be
     ωl = γh * Be
-    (Hz, Hr) = magfields(R, ωl, condLEM.σ, condLEM.d, rgrid, zgrid)
+    (Hz, Hr) = (qwe ? 
+        magfields(R, ωl, condLEM.σ, condLEM.d, rgrid, zgrid)
+        :
+        magfields_qwe(R, ωl, condLEM.σ, condLEM.d, rgrid, zgrid))
     kq = reduce(hcat, kernel_1d(q, ϕ, ωl, Hz, Hr, rgrid) for q in qgrid)
     dz = zgrid[2:end] .- zgrid[1:end-1]
     k_mat = m0 .* kq

@@ -117,7 +117,7 @@ plot(rgrid, result_Hr)
 plot(rgrid, result_analytic_Hr)
 gcf()
 ## 2D results
-zgrid = 10 .^(-2:0.025:0.5)
+zgrid = 10 .^(-3:0.025:0.5)
 Hz2d = reduce(hcat, collect(psum_kern.(k -> Hz_wavenumber(k,z), besselj0, rgrid, 1) for z in zgrid))
 Hr2d = reduce(hcat, collect(psum_kern.(k -> Hr_wavenumber(k,z), besselj1, rgrid, 1) for z in zgrid))
 Hza2d = [Hz_analytic(r,z) for r in rgrid, z in zgrid]
