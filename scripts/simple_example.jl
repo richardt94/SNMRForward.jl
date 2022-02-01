@@ -11,7 +11,7 @@ R = 10; #radius (metres)
 Hz_wavenumber(κ,z) = I * R * besselj1(κ*R) * exp(- κ * abs(z))/2;
 
 
-zgrid = 0:0.01*R:1.5*R
+zgrid = 0:0.01*R:10*R
 ##
 ##
 max_radius = 1.5*R;

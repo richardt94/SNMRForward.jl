@@ -194,7 +194,7 @@ cs = contourf(xs, zgrid, αt', levels=[0,45,90,135,210,225,270,315,360])
 gca().invert_yaxis()
 xlabel("distance from loop centre (m)")
 ylabel("depth (m)")
-colorbar(cs, label = "tipping angle (degrees)")
+colorbar(cs, label = "excitation angle (degrees)")
 display(gcf())
 savefig("tipping.png")
 
