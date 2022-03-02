@@ -7,6 +7,9 @@ import transD_GP.Model, transD_GP.Options
 import transD_GP.ModelNuisance, transD_GP.OptionsNuisance
 using SNMRForward, Random
 
+export γh, ConductivityModel, MRSForward, MRSForward_square
+export newSMRSounding, create_synthetic
+
 abstract type SMRSounding <: Operator1D end
 
 mutable struct SMRSoundingKnown <: SMRSounding
