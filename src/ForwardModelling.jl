@@ -1,5 +1,7 @@
 #1D forward modelling object for
 #MRS experiment with circular loop
+export ConductivityModel, MRSForward, MRSForward_square, forward
+
 struct MRSForward
     kernel::Matrix{<:Number}      #kernel (precomputed and stored)
     qgrid::AbstractVector{<:Real}
