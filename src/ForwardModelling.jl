@@ -38,7 +38,7 @@ Parameters:
 Optional parameters:
 - `nrvals`: number of radial points to use to evaluate the horizontal integration of the kernel.
 - `temp`: temperature in Kelvin, affects the magnitude of equilibrium magnetisation.
-- `qwe`: whether to use quadrature with extrapolation (QWE) to evaluate Hankel transforms for the kernel. \
+- `qwe`: whether to use quadrature with extrapolation (QWE) to evaluate Hankel transforms for the kernel. 
 This is slower, but more accurate at shallower depths, than the alternative 801-point digital filter.
 """
 function MRSForward(R::Real, zgrid::AbstractVector{<:Real},
