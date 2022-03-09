@@ -18,6 +18,8 @@ mutable struct SMRSoundingKnown <: SMRSounding
     σ_V0 :: Vector{<:Real}
     σ_ϕ :: Vector{<:Real}
     Fm :: SNMRForward.MRSForward
+    linearsat :: Bool
+    amponly :: Bool
 end
 
 mutable struct SMRSoundingUnknown <: SMRSounding
@@ -27,9 +29,11 @@ mutable struct SMRSoundingUnknown <: SMRSounding
     ϕ :: Vector{<:Real}
     Fm :: SNMRForward.MRSForward
     σd_diag :: Vector{<:Real}
+    linearsat :: Bool
+    amponly :: Bool
 end
 
-function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false)
+function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false)
     (length(V0) != length(ϕ) && 
     throw(ArgumentError("V0 and ϕ must have same length")))
     if !isnothing(σ_V0) || !isnothing(σ_ϕ)
@@ -39,20 +43,20 @@ function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false)
         if length(V0) != length(σ_V0) || length(ϕ) != length(σ_ϕ)
             throw(ArgumentError("σ_V0 and σ_ϕ must have the same length as the associated data"))
         end
-        return SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm)
+        return SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm, linearsat, amponly)
     end
 
     if mult
-        σd_diag = [S.V0; ones(length(ϕ))]
+        σd_diag = [V0; ones(length(ϕ))]
     else
         σd_diag = [ones(length(V0)); 1 ./ V0]
     end
-    SMRSoundingUnknown(V0, ϕ, Fm, σd_diag)
+    SMRSoundingUnknown(V0, ϕ, Fm, σd_diag, linearsat, amponly)
 end
 
 function get_misfit(m::Model, opt::Options, S::SMRSounding)
     opt.debug && return 0.0
-    get_misfit(10 .^ m.fstar[:], S)
+    get_misfit(S.linearsat ? m.fstar[:] : 10 .^ m.fstar[:], S)
 end
 # above defined function and type signature MUST be defined
 
@@ -60,7 +64,7 @@ function get_misfit(m::Model, mn::ModelNuisance, opt::Union{Options,OptionsNuisa
     #the "nuisance" in this case is a constant offset phase
     opt.debug && return 0.0
     offset_ϕ = mn.nuisance[1]
-    get_misfit(10 .^ m.fstar[:], S, offset_ϕ = offset_ϕ)
+    get_misfit(S.linearsat ? m.fstar[:] : 10 .^ m.fstar[:], S, offset_ϕ = offset_ϕ)
 end
 
 function get_misfit(w::Vector{<:Real}, S::SMRSounding; offset_ϕ = 0.)
@@ -69,21 +73,21 @@ function get_misfit(w::Vector{<:Real}, S::SMRSounding; offset_ϕ = 0.)
     ϕres = angle.(response) .+ offset_ϕ
     if isa(S, SMRSoundingKnown)
         #use provided noise
-        residual = [(S.V0 .- Vres)./S.σ_V0;
-                rem2pi.(S.ϕ - ϕres, RoundNearest)./S.σ_ϕ]
+        residual = [(S.V0 .- Vres)./S.σ_V0]
+        S.amponly || (residual = [residual; rem2pi.(S.ϕ - ϕres, RoundNearest)./S.σ_ϕ])
         return residual' * residual / 2
     else
         #maximum-likelihood estimate of multiplicative noise
-        residual = [S.V0 - Vres;
-                rem2pi.(S.ϕ - ϕres, RoundNearest)]./S.σd_diag
+        residual = [S.V0 - Vres]./S.σd_diag[1:length(Vres)]
+        S.amponly || (residual = [residual; rem2pi.(S.ϕ - ϕres, RoundNearest)./S.σd_diag[length(Vres)+1:end]])
         return length(residual)/2 * log(residual' * residual)
     end
 end
 
 function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Real},
             Be::Real, ϕ::Real, R::Real, zgrid::Vector{<:Real}, qgrid::Vector{<:Real}
-    ; noise_frac = 0.05, θ = 0., square=false, noise_mle = false, mult = false,
-    offset_ϕ = 0.)
+    ; noise_frac = 0.05, θ = 0., square=false, noise_mle = false, mult = false, linearsat=false,
+    amponly=false, offset_ϕ = 0.)
     ct = SNMRForward.ConductivityModel(σ, t)
 
     F = (square ?
@@ -107,7 +111,7 @@ function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Rea
         σ_ϕ = nothing
     end
 
-    newSMRSounding(noisy_V0, noisy_ϕ, F, σ_V0=σ_V0, σ_ϕ=σ_ϕ, mult=mult)
+    newSMRSounding(noisy_V0, noisy_ϕ, F, σ_V0=σ_V0, σ_ϕ=σ_ϕ, mult=mult, linearsat=linearsat, amponly=amponly)
 end
 
 
