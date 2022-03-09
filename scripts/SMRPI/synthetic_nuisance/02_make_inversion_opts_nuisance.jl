@@ -8,7 +8,7 @@ sdev_prop = 0.07*diff(fbounds, dims=2)[:]
 demean = false
 sdev_dc = 0.008*diff(fbounds, dims=2)[:]
 sampledc = true
-xall = permutedims(collect(znall))
+xall = permutedims(collect(1.:length(zboundaries)))
 xbounds = permutedims([extrema(znall)...])
 λ, δ = [2], 0.2
 ## Initialize a stationary GP using these options
