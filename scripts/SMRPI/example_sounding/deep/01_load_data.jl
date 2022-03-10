@@ -9,7 +9,6 @@ t = example_fid["time_fid"][:]
 fid_qt = example_fid["coil_1_fid"]
 ##
 V0, ϕ = get_sounding_curve(t, fid_qt)
-ϕ = deg2rad.(ϕ)
 ## params for the sounding - some of these are stored in the MATLAB file
 # but others (e.g. field inclination) are from site info for the survey
 # or separate ASCII files

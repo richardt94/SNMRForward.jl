@@ -43,7 +43,8 @@ function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, li
         if length(V0) != length(σ_V0) || length(ϕ) != length(σ_ϕ)
             throw(ArgumentError("σ_V0 and σ_ϕ must have the same length as the associated data"))
         end
-        return SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm, linearsat, amponly)
+        S = SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm, linearsat, amponly)
+        return S
     end
 
     if mult
