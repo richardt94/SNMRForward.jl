@@ -22,7 +22,7 @@ gcf()
 transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50)
 gcf()
 ## swarm plots
-SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.05)
+SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
 ## noise estimates
 if noise_mle
     ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)

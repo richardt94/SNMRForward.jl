@@ -142,7 +142,10 @@ function plotdata(S::SMRSounding, fig; iaxis=1, gridalpha=0.5, writelabel=true, 
         ax[iaxis+1].plot(S.Fm.qgrid, ϕ, linestyle="none", marker="o", markersize=msize)
         ax[iaxis+1].plot(S.Fm.qgrid, ϕ, linestyle="none", marker=".", markersize=msize/2)
     end
-    writelabel && writelabels(ax, iaxis, gridalpha) 
+    if writelabel # useful on the last iteration of model plotting
+        writelabels(ax, iaxis, gridalpha)
+        ax[iaxis+1].set_ylim(-pi, pi)
+    end 
     fig.tight_layout()
 end    
 
@@ -215,7 +218,10 @@ function plotcurve(V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha=0.5,
         ax[iaxis].plot(q, V0, color=lcolor, alpha=modelalpha)
         ax[iaxis+1].plot(q, rem2pi.(ϕ, RoundNearest), color=lcolor, alpha=modelalpha)
     end
-    writelabel && writelabels(ax, iaxis, gridalpha)
+    if writelabel # useful on the last iteration of model plotting
+        writelabels(ax, iaxis, gridalpha)
+        ax[iaxis+1].set_ylim(-pi, pi)
+    end    
     fig.tight_layout()
     nothing
 end  
