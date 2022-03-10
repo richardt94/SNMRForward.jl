@@ -1,6 +1,6 @@
-using transD_GP, PyPlot
+using transD_GP, PyPlot, Revise
 cd(@__DIR__)
-include("../SMRPI.jl")
+includet("../SMRPI.jl")
 ##
 L = sqrt(π*50^2/4)
 log_zgrid = 0.5:0.05:2
@@ -18,9 +18,13 @@ zall, znall, zboundaries = transD_GP.setupz(zstart, extendfrac, dz=dz, n=50, sho
 gcf()
 ##
 w = 0.01 * ones(length(zboundaries))
-w[zboundaries .> 30 .&& zboundaries .< 45] .= 0.5
+w[(zboundaries .> 30) .& (zboundaries .< 45)] .= 0.4
 ##
-sounding = SMRPI.create_synthetic(w, σ, t, Be, ϕ, 50., zboundaries, qgrid,
-            noise_mle=true, noise_frac=0.02, offset_ϕ = π/2)
+linearsat = true
+amponly = false
+mult = true
+noise_mle = true
+sounding = SMRPI.create_synthetic(w, σ, t, Be, ϕ, 50., zboundaries, qgrid, noise_mle=noise_mle, amponly=amponly,
+                noise_frac=0.05, mult=mult, linearsat=linearsat, offset_ϕ=π/2)
 ##
-transD_GP.get_misfit(w, sounding, offset_ϕ = π/2)
+transD_GP.get_misfit(w, sounding, offset_ϕ=π/2)

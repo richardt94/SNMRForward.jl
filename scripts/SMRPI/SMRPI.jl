@@ -33,7 +33,7 @@ mutable struct SMRSoundingUnknown <: SMRSounding
     amponly :: Bool
 end
 
-function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false)
+function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false, showplot=false)
     (length(V0) != length(ϕ) && 
     throw(ArgumentError("V0 and ϕ must have same length")))
     if !isnothing(σ_V0) || !isnothing(σ_ϕ)
@@ -51,7 +51,9 @@ function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, li
     else
         σd_diag = [ones(length(V0)); 1 ./ V0]
     end
-    SMRSoundingUnknown(V0, ϕ, Fm, σd_diag, linearsat, amponly)
+    S = SMRSoundingUnknown(V0, ϕ, Fm, σd_diag, linearsat, amponly)
+    showplot && plotdata(S)
+    S
 end
 
 function get_misfit(m::Model, opt::Options, S::SMRSounding)

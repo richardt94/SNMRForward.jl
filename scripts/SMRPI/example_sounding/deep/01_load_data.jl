@@ -9,6 +9,7 @@ t = example_fid["time_fid"][:]
 fid_qt = example_fid["coil_1_fid"]
 ##
 V0, ϕ = get_sounding_curve(t, fid_qt)
+ϕ = deg2rad.(ϕ)
 ## params for the sounding - some of these are stored in the MATLAB file
 # but others (e.g. field inclination) are from site info for the survey
 # or separate ASCII files
@@ -28,11 +29,13 @@ extendfrac, dz = 1.028, 1
 zall, znall, zboundaries = transD_GP.setupz(zstart, extendfrac, dz=dz, n=70, showplot=true)
 gcf()
 ##
-linearsat = false
+linearsat = true
 amponly = false
-mult = false
+mult = true
+phaserev = false
+phaserev && (ϕ=-ϕ)
 F = MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
-sounding = newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult)
+sounding = newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
 ##
 GMR_res = readdlm("../../../../example_data/conductive_earth_inversion_FID_40ms/conductive_earth_inversion_FID_40ms_1d_inversion.txt")
 wc_gmr = GMR_res[1:end-1,4]
