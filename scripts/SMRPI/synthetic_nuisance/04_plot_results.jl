@@ -1,31 +1,34 @@
 using Statistics
 ##
-
 close("all")
 transD_GP.getchi2forall(opt)
-ax = gcf().axes;
-χ² = length(sounding.V0)
-ax[2].plot(xlim(), [χ², χ²], "--", color="gray")
-ax[2].set_ylim(χ²-10, χ²+10)
-gcf()
+if !noise_mle
+    ax = gcf().axes;
+    χ² = amponly ? length(sounding.V0)/2 : length(sounding.V0)
+    ax[2].plot(xlim(), [χ², χ²], "--", color="gray")
+    ax[2].set_ylim(χ²-10, χ²+10)
+end
 ##
+istothepow = false
+@assert !(linearsat & istothepow)
 opt.xall[:] .= zboundaries
-transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=50, vmaxpc=1.0)
+transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=50, istothepow=istothepow, cmappdf="winter",
+    vmaxpc=1.0, pdfnormalize=false, plotmean=false, lwidth=1)
 ax = gcf().axes
-ax[1].step(log10.(w[2:end]), zboundaries[2:end], color="w", linewidth=2)
-ax[1].step(log10.(w[2:end]), zboundaries[2:end], color="g", linestyle="--")
+linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
+linearsat || ax[1].step(istothepow ? w : log10.(w), zboundaries, "w-")
+linearsat && ax[1].step(w, zboundaries, "w-")
 
-ax[1].set_xlabel("log\$_{10}\$ water content")
-
-gcf()
 ##
 # nuisance histograms
 transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50)
 gcf()
 
 ##
-F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
-est_σ2 = exp.(2/38 * F)/38
-est_σ = sqrt.(est_σ2)
-
-mean(est_σ)
+if noise_mle
+    ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
+    F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
+    est_σ2 = exp.(2/ndata * F)/ndata
+    est_σ = sqrt.(est_σ2)
+    @info mean(est_σ)
+end

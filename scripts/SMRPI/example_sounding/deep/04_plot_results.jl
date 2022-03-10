@@ -1,6 +1,5 @@
 using Statistics
 ##
-
 close("all")
 transD_GP.getchi2forall(opt)
 ax = gcf().axes;
@@ -12,21 +11,23 @@ gcf()
 istothepow = false
 @assert !(linearsat & istothepow)
 opt.xall[:] .= zboundaries
-transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.2, qp2=0.8, nbins=50, istothepow=istothepow, cmappdf="winter",
-    vmaxpc=1.0, pdfnormalize=false, plotmean=false, lwidth=1)
+transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=200, istothepow=istothepow, cmappdf="inferno", CIcolor=["c", "b"], fsize=12,
+    vmaxpc=1, pdfnormalize=true, plotmean=false, lwidth=1)
 ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
 linearsat || ax[1].plot(istothepow ? wc_gmr : log10.(wc_gmr), z_gmr, "w-")
 linearsat && ax[1].plot(wc_gmr, z_gmr, "w-")
 gcf()
-##
-# nuisance histograms
+## nuisance histograms
 transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50)
 gcf()
-
-##
-F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
-est_σ2 = exp.(1/length(sounding.V0) * F)/(2*length(sounding.V0))
-est_σ = sqrt.(est_σ2)
-
-mean(est_σ)
+## swarm plots
+SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
+## noise estimates
+if noise_mle
+    ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
+    F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
+    est_σ2 = exp.(2/ndata * F)/ndata
+    est_σ = sqrt.(est_σ2)
+    @info mean(est_σ)
+end

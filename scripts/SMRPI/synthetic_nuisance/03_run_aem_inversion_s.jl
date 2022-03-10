@@ -8,6 +8,12 @@ addprocs(nchains)
 @everywhere using transD_GP
 @everywhere include("../SMRPI.jl")
 ## run McMC
-@time transD_GP.main(opt, optn, sounding, Tmax=Tmax, nsamples=nsamples, nchains=nchains, nchainsatone=nchainsatone)
+@time begin
+    if sounding.amponly
+        transD_GP.main(opt, sounding, Tmax=Tmax, nsamples=nsamples, nchains=nchains, nchainsatone=nchainsatone)
+    else    
+        transD_GP.main(opt, optn, sounding, Tmax=Tmax, nsamples=nsamples, nchains=nchains, nchainsatone=nchainsatone)
+    end
+end    
 ## close the worker pool
 rmprocs(workers())
