@@ -5,7 +5,7 @@ on:
       - master
 jobs:
   build-and-publish:
-    concurrency: ci-${{ github.ref }} #to stop simultaneous docs builds
+    concurrency: docs-${{ github.ref }} #to stop simultaneous docs builds
     runs-on: ubuntu-latest
     strategy:
       matrix:
