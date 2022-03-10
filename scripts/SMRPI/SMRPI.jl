@@ -131,14 +131,16 @@ end
 
 function plotdata(S::SMRSounding, fig; iaxis=1, gridalpha=0.5, writelabel=true, msize=8)
     ax = fig.axes
+    ϕ = rem2pi.(S.ϕ, RoundNearest)
     if isa(S, SMRSoundingKnown)
+        σ_ϕ = rem2pi.(S.σ_ϕ, RoundNearest)
         ax[iaxis].errorbar(S.Fm.qgrid, S.V0, S.σ_V0, linestyle="none", marker=".", elinewidth=1, capsize=3)
-        ax[iaxis+1].errorbar(S.Fm.qgrid, S.ϕ, S.σ_ϕ, linestyle="none", marker=".", elinewidth=1, capsize=3)
+        ax[iaxis+1].errorbar(S.Fm.qgrid, ϕ, σ_ϕ, linestyle="none", marker=".", elinewidth=1, capsize=3)
     else
         ax[iaxis].plot(S.Fm.qgrid, S.V0, linestyle="none", marker="o", markersize=msize)
         ax[iaxis].plot(S.Fm.qgrid, S.V0, linestyle="none", marker=".", markersize=msize/2)
-        ax[iaxis+1].plot(S.Fm.qgrid, S.ϕ, linestyle="none", marker="o", markersize=msize)
-        ax[iaxis+1].plot(S.Fm.qgrid, S.ϕ, linestyle="none", marker=".", markersize=msize/2)
+        ax[iaxis+1].plot(S.Fm.qgrid, ϕ, linestyle="none", marker="o", markersize=msize)
+        ax[iaxis+1].plot(S.Fm.qgrid, ϕ, linestyle="none", marker=".", markersize=msize/2)
     end
     writelabel && writelabels(ax, iaxis, gridalpha) 
     fig.tight_layout()
@@ -184,10 +186,12 @@ end
 function plotmodelcurve(w, z, V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha=0.5, writelabel=true, lcolor="nocolor")
     # saturation with depth into axis
     ax = fig.axes
-    ax[iaxis].step(w, z)
+    ax[iaxis].step(w, z, color=lcolor, alpha=modelalpha)
     if writelabel
         ax[iaxis].grid(b=true, which="both", alpha=gridalpha)
         ax[iaxis].set_xlabel("saturation")
+        ax[iaxis].set_ylabel("depth m")
+        ax[iaxis].set_ylim(reverse(extrema(z)))
     end    
     plotcurve(V0, ϕ, q, fig, iaxis=iaxis+1, gridalpha=gridalpha, modelalpha=modelalpha,
                     lcolor=lcolor, writelabel=writelabel)
@@ -208,8 +212,8 @@ function plotcurve(V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha=0.5,
         ax[iaxis].plot(q, V0)
         ax[iaxis+1].plot(q, ϕ)
     else # plot with specified color
-        ax[iaxis].plot(q, V0, color=lcolor, modelalpha=modelalpha)
-        ax[iaxis+1].plot(q, ϕ, color=lcolor, modelalpha=modelalpha)
+        ax[iaxis].plot(q, V0, color=lcolor, alpha=modelalpha)
+        ax[iaxis+1].plot(q, rem2pi.(ϕ, RoundNearest), color=lcolor, alpha=modelalpha)
     end
     writelabel && writelabels(ax, iaxis, gridalpha)
     fig.tight_layout()
@@ -224,6 +228,28 @@ function writelabels(ax, iaxis, gridalpha)
     ax[iaxis+1].set_xlabel("Pulse moment A-s")
     ax[iaxis+1].set_ylabel("phase")
     ax[iaxis+1].grid(b=true, which="both", alpha=gridalpha)
+end  
+
+function plot_model_field(S::SMRSounding, opt::Options, optn::OptionsNuisance; 
+        gridalpha=0.5, figsize=(10,4), lcolor="nocolor", modelalpha=0.5, burninfrac=0.5, 
+        decfactor=10)
+    fig = figure(figsize=(figsize))
+    s1 = subplot(131)
+    s2 = subplot(132)
+    s3 = subplot(133, sharex=s2)
+    M = assembleTat1(opt, :fstar, temperaturenum=1, burninfrac=burninfrac)[1:decfactor:end]
+    Mnu = assemblenuisancesatT(optn, burninfrac = burninfrac, temperaturenum = 1)[1:decfactor:end]
+    T = S.linearsat ? x->x : x->10^x
+    for (imodel, (m, nu)) in enumerate(zip(M, Mnu))
+        w = T.(m)[:]
+        response = SNMRForward.forward(S.Fm, w)
+        Vresp = abs.(response)
+        ϕresp = angle.(response) .+ nu[1]
+        writelabel = imodel == length(M) ? true : false
+        plotmodelcurve(w, S.Fm.zgrid, Vresp, ϕresp, S.Fm.qgrid, fig, writelabel=writelabel,
+            gridalpha=gridalpha, lcolor=lcolor, modelalpha=modelalpha)
+    end
+    plotdata(S, fig, iaxis=2, gridalpha=gridalpha)    
 end  
 
 end
