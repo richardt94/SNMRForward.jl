@@ -246,7 +246,7 @@ legend(["forward of inverted WC", "V0 fitted data"])
 gcf()
 
 ## load the site resistivity profile
-resist_data = readdlm("example_data/1pm_res_profile.txt")
+resist_data = readdlm("example_data/example_res_profile.txt")
 c = 1 ./ resist_data[2:end,1]
 d = Vector{Float64}(resist_data[2:end-1,2])
 ##
