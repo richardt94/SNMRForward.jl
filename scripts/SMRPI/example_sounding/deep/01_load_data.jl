@@ -32,6 +32,7 @@ linearsat = true
 amponly = false
 mult = true
 phaserev = false
+##
 phaserev && (ϕ=-ϕ)
 F = MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
 sounding = newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
