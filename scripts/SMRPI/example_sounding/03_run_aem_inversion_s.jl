@@ -1,6 +1,6 @@
 ## set up McMC
 using Distributed
-nsamples, nchains, nchainsatone = 400001, 4, 1 # seems real data needs about 8 chains not 4
+nsamples, nchains, nchainsatone = 400001, 8, 1 # seems real data needs about 8 chains not 4
 Tmax = 2.5
 addprocs(nchains)
 @info "workers are $(workers())"

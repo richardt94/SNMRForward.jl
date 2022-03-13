@@ -16,11 +16,11 @@ freq = example_fid["detect_frequency"]
 L = 50
 inclination = 43.9 * π/180 #degrees to radians
 θ = 0 #loop oriented mag. north
-Be = 2π*freq/γh
+Be = 2π*freq/SMRPI.γh
 resist_data = readdlm("../../../example_data/example_res_profile.txt")
 c = 1 ./ resist_data[2:end,1]
 thick = Vector{Float64}(resist_data[2:end-1,2])
-σt = ConductivityModel(c,thick)
+σt = SMRPI.ConductivityModel(c,thick)
 ## define a depth grid for the modelling and inversion
 zstart = 1.
 extendfrac, dz = 1.028, 1
@@ -28,7 +28,7 @@ zall, znall, zboundaries = transD_GP.setupz(zstart, extendfrac, dz=dz, n=70, sho
 gcf()
 ##
 linearsat = true
-amponly = true
+amponly = false
 mult = false
 phaserev = false
 ##
