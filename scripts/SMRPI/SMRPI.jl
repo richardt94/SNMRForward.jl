@@ -20,6 +20,8 @@ mutable struct SMRSoundingKnown <: SMRSounding
     Fm :: SNMRForward.MRSForward
     linearsat :: Bool
     amponly :: Bool
+    offset_ϕ :: Real
+    stretch_ϕ ::Real 
 end
 
 mutable struct SMRSoundingUnknown <: SMRSounding
@@ -31,11 +33,18 @@ mutable struct SMRSoundingUnknown <: SMRSounding
     σd_diag :: Vector{<:Real}
     linearsat :: Bool
     amponly :: Bool
+    offset_ϕ :: Real
+    stretch_ϕ :: Real
 end
 
-function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false, showplot=false)
+function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false, showplot=false,
+                        offset_ϕ = nothing, stretch_ϕ=nothing)
     (length(V0) != length(ϕ) && 
-    throw(ArgumentError("V0 and ϕ must have same length")))
+        throw(ArgumentError("V0 and ϕ must have same length")))
+    (amponly && (!isnothing(offset_ϕ) | !isnothing(stretch_ϕ))) &&
+        throw(ArgumentError("Amplitude only requires no phase modification"))
+    isnothing(offset_ϕ) && (offset_ϕ = 0.)
+    isnothing(stretch_ϕ) && (stretch_ϕ = 1.)
     if !isnothing(σ_V0) || !isnothing(σ_ϕ)
         if isnothing(σ_V0) || isnothing(σ_ϕ)
             throw(ArgumentError("σ_V0 and σ_ϕ must both be provided, or neither."))
@@ -43,18 +52,36 @@ function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, li
         if length(V0) != length(σ_V0) || length(ϕ) != length(σ_ϕ)
             throw(ArgumentError("σ_V0 and σ_ϕ must have the same length as the associated data"))
         end
-        S = SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm, linearsat, amponly)
+        S = SMRSoundingKnown(V0, ϕ, σ_V0, σ_ϕ, Fm, linearsat, amponly, offset_ϕ, stretch_ϕ)
         return S
     end
-
     if mult
         σd_diag = [V0; ones(length(ϕ))]
     else
         σd_diag = [ones(length(V0)); 1 ./ V0]
     end
-    S = SMRSoundingUnknown(V0, ϕ, Fm, σd_diag, linearsat, amponly)
+    S = SMRSoundingUnknown(V0, ϕ, Fm, σd_diag, linearsat, amponly, offset_ϕ, stretch_ϕ)
     showplot && plotdata(S)
     S
+end
+
+function extractnu!(S::SMRSounding, nuvec::AbstractVector) # useful for plotting reuse
+    S.offset_ϕ = nuvec[1]
+    S.stretch_ϕ = 10. ^nuvec[2]
+end    
+
+phasemodif(ϕ; stretch=1, offset=0) = stretch*ϕ .+ offset 
+
+function applynu(S::SMRSounding, w::Vector{<:Real}) # useful for plotting and misfit reapply
+    applynu(S.Fm, w, offset_ϕ=S.offset_ϕ, stretch_ϕ=S.stretch_ϕ)
+end
+
+function applynu(Fm::SNMRForward.MRSForward, w::AbstractVector; offset_ϕ=0., stretch_ϕ=1.)
+    response = SNMRForward.forward(Fm, w)
+    Vres = abs.(response)
+    ϕres = angle.(response)
+    ϕres = phasemodif(ϕres, offset=offset_ϕ, stretch=stretch_ϕ)    
+    Vres, ϕres
 end
 
 function get_misfit(m::Model, opt::Options, S::SMRSounding)
@@ -64,23 +91,21 @@ end
 # above defined function and type signature MUST be defined
 
 function get_misfit(m::Model, mn::ModelNuisance, opt::Union{Options,OptionsNuisance}, S::SMRSounding)
-    #the "nuisance" in this case is a constant offset phase
+    # the "nuisance" in this case is a constant offset phase and log10 of a stretch factor
     opt.debug && return 0.0
-    offset_ϕ = mn.nuisance[1]
-    get_misfit(S.linearsat ? m.fstar[:] : 10 .^ m.fstar[:], S, offset_ϕ = offset_ϕ)
+    extractnu!(S, mn.nuisance)
+    get_misfit(S.linearsat ? m.fstar[:] : 10 .^ m.fstar[:], S, )
 end
 
-function get_misfit(w::Vector{<:Real}, S::SMRSounding; offset_ϕ = 0.)
-    response = SNMRForward.forward(S.Fm, w)
-    Vres = abs.(response)
-    ϕres = angle.(response) .+ offset_ϕ
+function get_misfit(w::Vector{<:Real}, S::SMRSounding)
+    Vres, ϕres = applynu(S, w)
     if isa(S, SMRSoundingKnown)
         #use provided noise
         residual = (S.V0 .- Vres)./S.σ_V0
         S.amponly || (residual = [residual; rem2pi.(S.ϕ - ϕres, RoundNearest)./S.σ_ϕ])
         return residual' * residual / 2
     else
-        #maximum-likelihood estimate of multiplicative noise
+        # maximum-likelihood noise models
         residual = (S.V0 - Vres)./S.σd_diag[1:length(Vres)]
         S.amponly || (residual = [residual; rem2pi.(S.ϕ - ϕres, RoundNearest)./S.σd_diag[length(Vres)+1:end]])
         return length(residual)/2 * log(residual' * residual)
@@ -90,7 +115,7 @@ end
 function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Real},
             Be::Real, ϕ::Real, R::Real, zgrid::Vector{<:Real}, qgrid::Vector{<:Real}
     ; noise_frac = 0.05, θ = 0., square=false, noise_mle = false, mult = false, linearsat=false,
-    amponly=false, offset_ϕ = 0., showplot=true, rseed=131)
+    amponly=false, offset_ϕ = 0., stretch_ϕ = 1., showplot=true, rseed=131)
     Random.seed!(rseed)
     ct = SNMRForward.ConductivityModel(σ, t)
 
@@ -98,25 +123,26 @@ function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Rea
         SNMRForward.MRSForward(R, zgrid, qgrid, ϕ, Be, ct) :
         SNMRForward.MRSForward_square(R, zgrid, qgrid, ϕ, θ, Be, ct))
 
-    synth_data = SNMRForward.forward(F,w)
+    Vres, ϕres = applynu(F,w, offset_ϕ=offset_ϕ, stretch_ϕ=stretch_ϕ)
     if mult
-        σ_V0 = noise_frac * abs.(synth_data)
-        σ_ϕ = noise_frac * ones(size(synth_data))
+        σ_V0 = noise_frac * Vres
+        σ_ϕ = noise_frac * ones(size(Vres))
     else
-        σ = noise_frac * maximum(abs.(synth_data))
-        σ_V0 = σ * ones(size(synth_data))
-        σ_ϕ = σ ./ abs.(synth_data)
+        σ = noise_frac * maximum(Vres)
+        σ_V0 = σ * ones(size(Vres))
+        σ_ϕ = σ ./ Vres
     end
-    noisy_V0 = abs.(synth_data) .+ σ_V0 .* randn(size(abs.(synth_data)))
-    noisy_ϕ = angle.(synth_data) .+ σ_ϕ .* randn(size(abs.(synth_data))) .+ offset_ϕ
+    noisy_V0 = Vres .+ σ_V0 .* randn(size(Vres))
+    noisy_ϕ = ϕres .+ σ_ϕ .* randn(size(Vres))
 
     if noise_mle
         σ_V0 = nothing
         σ_ϕ = nothing
     end
-    S = newSMRSounding(noisy_V0, noisy_ϕ, F, σ_V0=σ_V0, σ_ϕ=σ_ϕ, mult=mult, linearsat=linearsat, amponly=amponly)
+    S = newSMRSounding(noisy_V0, noisy_ϕ, F, σ_V0=σ_V0, σ_ϕ=σ_ϕ, mult=mult, linearsat=linearsat, 
+                    amponly=amponly, offset_ϕ=offset_ϕ, stretch_ϕ=stretch_ϕ)
     if showplot 
-        fig = plotmodelcurve(ct.σ, ct.d, w, zgrid, abs.(synth_data), angle.(synth_data), qgrid)
+        fig = plotmodelcurve(ct.σ, ct.d, w, zgrid, Vres, ϕres, qgrid, modelalpha=1)
         plotdata(S, fig, iaxis=3, writelabel=false, msize=8)
     end
     S
@@ -190,7 +216,11 @@ end
 function plotmodelcurve(w, z, V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha=0.5, writelabel=true, lcolor="nocolor")
     # saturation with depth into axis
     ax = fig.axes
-    ax[iaxis].step(w, z, color=lcolor, alpha=modelalpha)
+    if lcolor == "nocolor"
+        ax[iaxis].step(w, z, alpha=modelalpha)
+    else    
+        ax[iaxis].step(w, z, color=lcolor, alpha=modelalpha)
+    end    
     if writelabel
         ax[iaxis].grid(b=true, which="both", alpha=gridalpha)
         ax[iaxis].set_xlabel("saturation")
@@ -240,23 +270,45 @@ end
 function plot_model_field(S::SMRSounding, opt::Options, optn::OptionsNuisance; 
         gridalpha=0.5, figsize=(10,4), lcolor="nocolor", modelalpha=0.5, burninfrac=0.5, 
         decfactor=10)
-    fig = figure(figsize=(figsize))
-    s1 = subplot(131)
-    s2 = subplot(132)
-    s3 = subplot(133, sharex=s2)
+    fig = initfig(figsize)
     M = assembleTat1(opt, :fstar, temperaturenum=1, burninfrac=burninfrac)[1:decfactor:end]
-    Mnu = assemblenuisancesatT(optn, burninfrac = burninfrac, temperaturenum = 1)[1:decfactor:end]
+    Mnu = assemblenuisancesatT(optn, burninfrac = burninfrac, temperaturenum = 1)[1:decfactor:end,:]
+    @assert length(M) == size(Mnu, 1)
     T = S.linearsat ? x->x : x->10^x
-    for (imodel, (m, nu)) in enumerate(zip(M, Mnu))
+    for (imodel, m) in enumerate(M)
         w = T.(m)[:]
-        response = SNMRForward.forward(S.Fm, w)
-        Vresp = abs.(response)
-        ϕresp = angle.(response) .+ nu[1]
+        extractnu!(S, vec(Mnu[imodel,:]))
+        Vresp, ϕresp = applynu(S, w)
         writelabel = imodel == length(M) ? true : false
         plotmodelcurve(w, S.Fm.zgrid, Vresp, ϕresp, S.Fm.qgrid, fig, writelabel=writelabel,
             gridalpha=gridalpha, lcolor=lcolor, modelalpha=modelalpha)
     end
     plotdata(S, fig, iaxis=2, gridalpha=gridalpha)    
 end  
+
+function plot_model_field(S::SMRSounding, opt::Options;
+        gridalpha=0.5, figsize=(10,4), lcolor="nocolor", modelalpha=0.5, burninfrac=0.5, 
+        decfactor=10)
+    fig = initfig(figsize)
+    M = assembleTat1(opt, :fstar, temperaturenum=1, burninfrac=burninfrac)[1:decfactor:end]
+    T = S.linearsat ? x->x : x->10^x
+    for (imodel, m) in enumerate(M)
+        w = T.(m)[:]
+        @assert (isapprox(S.stretch_ϕ, 1.) && isapprox(S.offset_ϕ, 0.))
+        Vresp, ϕresp = applynu(S, w)  
+        writelabel = imodel == length(M) ? true : false
+        plotmodelcurve(w, S.Fm.zgrid, Vresp, ϕresp, S.Fm.qgrid, fig, writelabel=writelabel,
+            gridalpha=gridalpha, lcolor=lcolor, modelalpha=modelalpha)
+    end
+    plotdata(S, fig, iaxis=2, gridalpha=gridalpha)    
+end  
+
+function initfig(figsize)
+    fig = figure(figsize=(figsize))
+    s1 = subplot(131)
+    s2 = subplot(132)
+    s3 = subplot(133, sharex=s2)
+    fig
+end
 
 end

@@ -11,7 +11,7 @@ gcf()
 istothepow = false
 @assert !(linearsat & istothepow)
 opt.xall[:] .= zboundaries
-transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=200, istothepow=istothepow, cmappdf="inferno", CIcolor=["c", "b"], fsize=12,
+transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=50, istothepow=istothepow, cmappdf="inferno", CIcolor=["c", "b"], fsize=12,
     vmaxpc=1, pdfnormalize=true, plotmean=false, lwidth=1)
 ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
@@ -23,12 +23,16 @@ savefig(fileprefix*"post.png", dpi=600)
 transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50)
 gcf()
 ## swarm plots
-amponly || SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
+if amponly
+    SMRPI.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
+else    
+    SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
+end  
 gcf()
 savefig(fileprefix*"swarm.png", dpi=600)
 ## noise estimates
 ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
-F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
-est_σ2 = exp.(2/ndata * F)/ndata
+NLL = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
+est_σ2 = exp.(2/ndata * NLL)/ndata
 est_σ = sqrt.(est_σ2)
 @info mean(est_σ)

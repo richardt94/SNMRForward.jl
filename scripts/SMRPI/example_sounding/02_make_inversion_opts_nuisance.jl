@@ -37,6 +37,8 @@ opt = transD_GP.OptionsStat(nmin = nmin,
                         )
 
 optn = transD_GP.OptionsNuisance(opt;
-            sdev = [0.005],
-            bounds = [-π π],
-            updatenuisances = true)                        
+                        sdev = [0.005, 
+                                0.01], #fractions of bounds
+                        bounds = [-π π
+                                  0 1],
+                        updatenuisances = true)                              

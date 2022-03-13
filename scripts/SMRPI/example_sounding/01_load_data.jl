@@ -1,7 +1,7 @@
 using transD_GP, PyPlot, MAT, DelimitedFiles, Revise
 cd(@__DIR__)
-includet("../../SMRPI.jl")
-includet("../../ProcessingTools.jl")
+includet("../SMRPI.jl")
+includet("../ProcessingTools.jl")
 using .SMRPI, .ProcessingTools
 ## Load the processed data from a GMR FID sounding
 example_fid = matread("../../../../example_data/FID_40ms.mat")
@@ -29,14 +29,14 @@ zall, znall, zboundaries = transD_GP.setupz(zstart, extendfrac, dz=dz, n=70, sho
 gcf()
 ##
 linearsat = true
-amponly = false
-mult = true
+amponly = true
+mult = false
 phaserev = false
 ##
 phaserev && (ϕ=-ϕ)
-F = MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
-sounding = newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
+F = SMRPI.MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
+sounding = SMRPI.newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
 ##
-GMR_res = readdlm("../../../../example_data/conductive_earth_inversion_FID_40ms/conductive_earth_inversion_FID_40ms_1d_inversion.txt")
+GMR_res = readdlm("../../../example_data/conductive_earth_inversion_FID_40ms/conductive_earth_inversion_FID_40ms_1d_inversion.txt")
 wc_gmr = GMR_res[1:end-1,4]
 z_gmr = (GMR_res[1:end-1, 1] .+ GMR_res[1:end-1, 1])/2
