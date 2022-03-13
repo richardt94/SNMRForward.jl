@@ -38,7 +38,7 @@ opt = transD_GP.OptionsStat(nmin = nmin,
 
 optn = transD_GP.OptionsNuisance(opt;
                         sdev = [0.005, 
-                                0.01], #fractions of bounds
-                        bounds = [-π π
-                                  0 1],
+                                0.01], #fractions of bounds, zero boundswidth == no sampling
+                        bounds = [-π π # phase shift
+                                  log10.([1 30])], # stretch in log10
                         updatenuisances = true)                              

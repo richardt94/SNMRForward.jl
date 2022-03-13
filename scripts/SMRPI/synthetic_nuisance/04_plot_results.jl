@@ -18,9 +18,7 @@ ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
 linearsat || ax[1].step(istothepow ? w : log10.(w), zboundaries, "w-")
 linearsat && ax[1].step(w, zboundaries, "w-")
-
-##
-# nuisance histograms
+## nuisance histograms
 transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50, figsize=(5,4))
 gcf()
 ## swarm plots
@@ -29,7 +27,7 @@ if amponly
 else    
     SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
 end    
-##
+## nosie estimates
 if noise_mle
     ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
     F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)

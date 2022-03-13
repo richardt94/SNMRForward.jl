@@ -1,7 +1,7 @@
 ## make options for the stationary GP
 fileprefix = "SMR_example_"*(linearsat ? "linearsat_" : "logsat_")*
                             (amponly ? "amponly_" : "")*
-                            (mult ? :"multnoise_" : "")*
+                            (mult ? "multnoise_" : "")*
                             (noise_mle ? "mle_" : "")
 K = transD_GP.GP.OrstUhn()
 nmin, nmax = 2, 40
@@ -39,7 +39,7 @@ opt = transD_GP.OptionsStat(nmin = nmin,
 
 optn = transD_GP.OptionsNuisance(opt;
             sdev = [0.005, 
-                    0.01], #fractions of bounds
-            bounds = [-π π
-                      1. 2],
+                    0.01], #fractions of bounds, zero boundswidth below means no sampling of it
+            bounds = [-π π # offset phase
+                      log10.([1. 10.])], # log10 phase stretch
             updatenuisances = true)                        

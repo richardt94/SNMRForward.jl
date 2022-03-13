@@ -2,11 +2,6 @@ using Statistics
 ##
 close("all")
 transD_GP.getchi2forall(opt)
-ax = gcf().axes;
-# χ² = length(sounding.V0)
-# ax[2].plot(xlim(), [χ², χ²], "--", color="gray")
-# ax[2].set_ylim(χ²-10, χ²+10)
-gcf()
 ##
 istothepow = false
 @assert !(linearsat & istothepow)
@@ -17,22 +12,18 @@ ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
 linearsat || ax[1].plot(istothepow ? wc_gmr : log10.(wc_gmr), z_gmr, "w-")
 linearsat && ax[1].plot(wc_gmr, z_gmr, "w-")
-gcf()
-savefig(fileprefix*"post.png", dpi=600)
 ## nuisance histograms
-transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50)
+transD_GP.plot_posterior(sounding, optn, burninfrac=0.5, nbins=50, figsize=(5,4))
 gcf()
 ## swarm plots
 if amponly
     SMRPI.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
 else    
     SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
-end  
-gcf()
-savefig(fileprefix*"swarm.png", dpi=600)
+end    
 ## noise estimates
 ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
-NLL = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
-est_σ2 = exp.(2/ndata * NLL)/ndata
+F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
+est_σ2 = exp.(2/ndata * F)/ndata
 est_σ = sqrt.(est_σ2)
 @info mean(est_σ)

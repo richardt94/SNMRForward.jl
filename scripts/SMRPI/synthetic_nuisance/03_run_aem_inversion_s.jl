@@ -7,7 +7,7 @@ addprocs(nchains)
 @everywhere begin
     using Distributed
     using transD_GP
-    !isdefined(@__MODULE__, :SMRPI) && include("../../SMRPI.jl")
+    !isdefined(@__MODULE__, :SMRPI) && include("../SMRPI.jl")
 end 
 ## run McMC
 @time begin

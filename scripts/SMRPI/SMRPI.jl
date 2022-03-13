@@ -38,13 +38,11 @@ mutable struct SMRSoundingUnknown <: SMRSounding
 end
 
 function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false, showplot=false,
-                        offset_ϕ = nothing, stretch_ϕ=nothing)
+                        offset_ϕ = 0., stretch_ϕ=1.)
     (length(V0) != length(ϕ) && 
         throw(ArgumentError("V0 and ϕ must have same length")))
-    (amponly && (!isnothing(offset_ϕ) | !isnothing(stretch_ϕ))) &&
+    (amponly && (!isapprox(offset_ϕ, 0.) | !isapprox(stretch_ϕ, 1.))) &&
         throw(ArgumentError("Amplitude only requires no phase modification"))
-    isnothing(offset_ϕ) && (offset_ϕ = 0.)
-    isnothing(stretch_ϕ) && (stretch_ϕ = 1.)
     if !isnothing(σ_V0) || !isnothing(σ_ϕ)
         if isnothing(σ_V0) || isnothing(σ_ϕ)
             throw(ArgumentError("σ_V0 and σ_ϕ must both be provided, or neither."))
