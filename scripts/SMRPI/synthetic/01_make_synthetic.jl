@@ -21,9 +21,9 @@ w = 0.01 * ones(length(zboundaries))
 w[(zboundaries .> 30) .& (zboundaries .< 45)] .= 0.4
 ##
 linearsat = true
-amponly = true
+amponly = false
 mult = false
-noise_mle = true
+noise_mle = false
 sounding = SMRPI.create_synthetic(w, σ, t, Be, ϕ, 50., zboundaries, qgrid, noise_mle=noise_mle, amponly=amponly,
                 noise_frac=0.05, mult=mult, linearsat=linearsat)
 ##

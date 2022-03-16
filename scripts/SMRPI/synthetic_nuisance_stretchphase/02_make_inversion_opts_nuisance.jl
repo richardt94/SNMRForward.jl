@@ -39,8 +39,7 @@ opt = transD_GP.OptionsStat(nmin = nmin,
 
 optn = transD_GP.OptionsNuisance(opt;
             sdev = [0.005, 
-                    0.01], # fractions of bounds
-            # if any of the boundswidths below are zero it is not sampled
-            bounds = [-π  π # phase shift
-                       0. 0.], # log10 phase stretch
+                    0.01], #fractions of bounds, zero boundswidth below means no sampling of it
+            bounds = [-π π # offset phase
+                      log10.([1. 10.])], # log10 phase stretch
             updatenuisances = true)                        

@@ -18,9 +18,13 @@ ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 
 linearsat || ax[1].step(istothepow ? w : log10.(w), zboundaries, "w-")
 linearsat && ax[1].step(w, zboundaries, "w-")
-
-
-##
+## amplitude swarm plots
+if sounding.amponly
+    SMRPI.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
+else    
+    SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
+end  
+## noise estimates
 if noise_mle
     ndata = amponly ? length(sounding.V0) : 2*length(sounding.V0)
     F = transD_GP.assembleTat1(opt, :U, temperaturenum=1)
