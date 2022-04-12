@@ -5,7 +5,11 @@ using transD_GP.AbstractOperator, transD_GP.CommonToAll
 import transD_GP.AbstractOperator.get_misfit
 import transD_GP.Model, transD_GP.Options
 import transD_GP.ModelNuisance, transD_GP.OptionsNuisance
+import transD_GP.AbstractOperator.Sounding
+using transD_GP
 using SNMRForward, Random, PyPlot
+
+using Distributed, Dates
 
 export γh, ConductivityModel, MRSForward, MRSForward_square
 export newSMRSounding, create_synthetic
@@ -308,5 +312,98 @@ function initfig(figsize)
     s3 = subplot(133, sharex=s2)
     fig
 end
+
+mutable struct SMRSoundingWrapper <: Sounding
+    sounding_name :: String
+    sounding :: SMRSounding
+end
+
+function loopacrosssoundings(
+    soundings::Array{S, 1};
+    nsequentialiters   = -1,
+    nparallelsoundings = -1,
+    Tmax               = -1,
+    nsamples           = -1,
+    nchainsatone       = -1,
+    nchainspersounding = -1,
+    nmin               = 2,
+    nmax               = 40,
+    K                  = GP.OrstUhn(),
+    demean             = false,
+    sampledc           = true,
+    sddc               = 0.01,
+    sdpos              = 0.05,
+    sdprop             = 0.05,
+    fbounds            = [-0.5 2.5],
+    xbounds            = [],
+    xall               = [],
+    λ                  = [2],
+    δ                  = 0.01,
+    save_freq          = 50,
+    nuisance_sdev      = [0., 0.],
+    nuisance_bounds    = [0. 0.;
+                            0. 0.],
+    updatenuisances    = true,
+) where S<:Sounding
+
+    @assert nsequentialiters  != -1
+    @assert nparallelsoundings != -1
+    @assert nchainspersounding != -1
+    @assert nsamples != - 1
+    @assert nchainsatone != -1
+    @assert Tmax != -1
+    @assert length(xbounds) > 0
+    @assert length(xall) > 0
+
+    nsoundings = length(soundings)
+
+    for iter = 1:nsequentialiters
+        if iter<nsequentialiters
+            ss = (iter-1)*nparallelsoundings+1:iter*nparallelsoundings
+        else
+            ss = (iter-1)*nparallelsoundings+1:nsoundings
+        end
+        @info "soundings in loop $iter of $nsequentialiters", ss
+        r_nothing = Array{Nothing, 1}(undef, length(ss))
+        @sync for (i, s) in Iterators.reverse(enumerate(ss))
+            pids = (i-1)*nchainspersounding+i:i*(nchainspersounding+1)
+            @info "pids in sounding $s:", pids
+
+            opt = transD_GP.OptionsStat(
+                nmin = nmin,
+                nmax = nmax,
+                xbounds = xbounds,
+                fbounds = fbounds,
+                fdataname = soundings[s].sounding_name*"_",
+                xall = xall,
+                λ = λ,
+                δ = δ,
+                sdev_prop = sdprop,
+                sdev_pos = sdpos,
+                save_freq = save_freq,
+                demean = demean,
+                sampledc = sampledc,
+                sdev_dc = sddc,
+                quasimultid = false,
+                K = K,
+            )
+            
+            optn = transD_GP.OptionsNuisance(
+                opt;
+                sdev = nuisance_sdev,
+                bounds = nuisance_bounds,
+                updatenuisances = updatenuisances
+            )
+
+            @async r_nothing[i] = remotecall_fetch(transD_GP.main, pids[1], opt, optn, soundings[s].sounding, collect(pids[2:end]),
+                                    Tmax         = Tmax,
+                                    nsamples     = nsamples,
+                                    nchainsatone = nchainsatone)
+
+        end # @sync
+        @info "done $iter out of $nsequentialiters at $(Dates.now())"
+    end
+end
+
 
 end
