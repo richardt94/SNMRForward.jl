@@ -14,7 +14,7 @@ sdev_dc = 0.008*diff(fbounds, dims=2)[:]
 sampledc = true
 xall = permutedims(collect(1:1.0:length(zboundaries)))
 xbounds = permutedims([extrema(xall)...])
-λ, δ = [2], (linearsat ? 0.01 : 0.0001)
+λ, δ = [2], (!linearsat ? 0.01 : 0.0001)
 ## Initialize a stationary GP using these options
 using Random
 Random.seed!(12)
