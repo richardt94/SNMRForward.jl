@@ -1,12 +1,12 @@
 # wrapper to integrate SMRPI 1D forward model with
 # HiQGA/transD_GP
 module SMRPI
-using transD_GP.AbstractOperator, transD_GP.CommonToAll
-import transD_GP.AbstractOperator.get_misfit
-import transD_GP.Model, transD_GP.Options
-import transD_GP.ModelNuisance, transD_GP.OptionsNuisance
-import transD_GP.AbstractOperator.Sounding
-using transD_GP
+using HiQGA.transD_GP.AbstractOperator, HiQGA.transD_GP.CommonToAll
+import HiQGA.transD_GP.AbstractOperator.get_misfit
+import HiQGA.transD_GP.Model, HiQGA.transD_GP.Options
+import HiQGA.transD_GP.ModelNuisance, HiQGA.transD_GP.OptionsNuisance
+import HiQGA.transD_GP.AbstractOperator.Sounding
+using HiQGA.transD_GP
 using SNMRForward, Random, PyPlot
 
 using Distributed, Dates
@@ -116,7 +116,7 @@ end
 
 function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Real},
             Be::Real, ϕ::Real, R::Real, zgrid::Vector{<:Real}, qgrid::Vector{<:Real}
-    ; noise_frac = 0.05, θ = 0., square=false, noise_mle = false, mult = false, linearsat=false,
+    ; noise_frac = 0.05, noise_additive = 100e-9, θ = 0., square=false, noise_mle = false, mult = false, linearsat=false,
     amponly=false, offset_ϕ = 0., stretch_ϕ = 1., showplot=true, rseed=131)
     Random.seed!(rseed)
     ct = SNMRForward.ConductivityModel(σ, t)
@@ -130,9 +130,8 @@ function create_synthetic(w::Vector{<:Real}, σ::Vector{<:Real}, t::Vector{<:Rea
         σ_V0 = noise_frac * Vres
         σ_ϕ = noise_frac * ones(size(Vres))
     else
-        σ = noise_frac * maximum(Vres)
-        σ_V0 = σ * ones(size(Vres))
-        σ_ϕ = σ ./ Vres
+        σ_V0 = noise_additive * ones(size(Vres))
+        σ_ϕ = noise_additive ./ Vres
     end
     noisy_V0 = Vres .+ σ_V0 .* randn(size(Vres))
     noisy_ϕ = ϕres .+ σ_ϕ .* randn(size(Vres))

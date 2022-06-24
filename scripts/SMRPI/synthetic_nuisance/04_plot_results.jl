@@ -12,7 +12,7 @@ end
 istothepow = false
 @assert !(linearsat & istothepow)
 opt.xall[:] .= zboundaries
-transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=50, istothepow=istothepow, cmappdf="winter",
+transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, figsize=(10,6), qp1=0.05, qp2=0.95, nbins=50, istothepow=istothepow, #cmappdf="winter",
     vmaxpc=1.0, pdfnormalize=false, plotmean=false, lwidth=1)
 ax = gcf().axes
 linearsat ? ax[1].set_xlabel("fractional water content") : ax[1].set_xlabel("log\$_{10}\$ water content") 

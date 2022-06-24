@@ -3,7 +3,7 @@ cd(@__DIR__)
 includet("../SMRPI.jl")
 includet("../ProcessingTools.jl")
 ## Load the processed data from a GMR FID sounding
-example_fid = matread("../../../example_data/FID_40ms.mat")
+example_fid = matread("/g/data/z67/rlt118/SNMR_data/OK18_38/FID_80ms_noemi.mat")
 t = example_fid["time_fid"][:]
 fid_qt = example_fid["coil_1_fid"]
 ##
@@ -20,10 +20,10 @@ V0 = V0[:,1+ntrunc:end]
 ϕ = ϕ[:, 1+ntrunc:end]
 ##
 L = 50
-inclination = 43.9 * π/180 #degrees to radians
+inclination = 44.2 * π/180 #degrees to radians
 θ = 0 #loop oriented mag. north
 Be = 2π*freq/SMRPI.γh
-resist_data = readdlm("../../../example_data/example_res_profile.txt")
+resist_data = readdlm("/g/data/z67/rlt118/SNMR_data/OK18_38/OK18_38_res_profile.txt")
 c = 1 ./ resist_data[2:end,1]
 thick = Vector{Float64}(resist_data[2:end-1,2])
 σt = SMRPI.ConductivityModel(c,thick)
@@ -36,12 +36,9 @@ gcf()
 linearsat = true
 amponly = true
 mult = false
-phaserev = true
+phaserev = false
 ##
 phaserev && (ϕ=-ϕ)
 F = SMRPI.MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
 sounding = SMRPI.newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
 ##
-GMR_res = readdlm("../../../example_data/conductive_earth_inversion_FID_40ms/conductive_earth_inversion_FID_40ms_1d_inversion.txt")
-wc_gmr = GMR_res[1:end-1,4]
-z_gmr = (GMR_res[1:end-1, 1] .+ GMR_res[1:end-1, 1])/2

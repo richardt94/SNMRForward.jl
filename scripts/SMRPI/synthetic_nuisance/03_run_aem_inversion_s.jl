@@ -6,7 +6,7 @@ addprocs(nchains)
 @info "workers are $(workers())"
 @everywhere begin
     using Distributed
-    using transD_GP
+    using HiQGA.transD_GP
     !isdefined(@__MODULE__, :SMRPI) && include("../SMRPI.jl")
 end 
 ## run McMC

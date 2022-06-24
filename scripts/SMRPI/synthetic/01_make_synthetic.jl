@@ -1,4 +1,4 @@
-using transD_GP, PyPlot, Revise
+using HiQGA.transD_GP, PyPlot, Revise
 cd(@__DIR__)
 includet("../SMRPI.jl")
 ##
