@@ -1,4 +1,4 @@
-# Constants
+# Constants and convenience functions
 SNMRForward exports values of a number of useful physical constants related to the physics of the SNMR technique.
 
 ```@docs
@@ -7,4 +7,5 @@ SNMRForward exports values of a number of useful physical constants related to t
 ħ
 kb
 nh2o
+mag_factor
 ```

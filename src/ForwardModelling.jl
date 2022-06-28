@@ -2,6 +2,15 @@
 #MRS experiment with circular loop
 export ConductivityModel, MRSForward, MRSForward_square, forward
 
+"""
+Data type for forward modelling 1D magnetic resonance sounding (MRS) experiments.
+
+Members:
+-`kernel::Matrix{<:Number}`: pre-computed linear kernel matrix for the forward problem. May be complex.
+-`qgrid::AbstractVector{<:Real}`: pulse moments used in the experiment.
+-`zgrid::AbstractVector{<:Real}`: depth grid for forward modelling (as cell boundaries).
+-`dz::AbstractVector{<:Real}`: cell thickness of the depth grid.
+"""
 struct MRSForward
     kernel::Matrix{<:Number}      #kernel (precomputed and stored)
     qgrid::AbstractVector{<:Real}
@@ -9,6 +18,13 @@ struct MRSForward
     dz::AbstractVector{<:Real}
 end
 
+"""
+A data type for a layered-earth conductivity model.
+
+Members:
+- `σ::Vector{<:Real}`: conductivity of each layer
+- `d::Vector{<:Real}`: thickness (*not* depth) of each layer. Length must be one less than length of `σ`, as the bottom layer is an infinite half-space.
+"""
 struct ConductivityModel
     σ::Vector{<:Real}
     d::Vector{<:Real}
