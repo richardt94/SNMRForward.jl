@@ -17,8 +17,8 @@ jobs:
         uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
-      - name: Install Documenter
-        run: julia -e 'using Pkg; Pkg.add("Documenter")'
+      - name: Install Documenter and Literate
+        run: julia -e 'using Pkg; Pkg.add("Documenter", "Literate")'
       - name: Install SNMRForward in Julia
         run: |
           julia -e 'using Pkg; Pkg.develop(path=".")'
