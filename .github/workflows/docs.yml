@@ -13,12 +13,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install matplotlib on system python env
+        run: pip install matplotlib
       - name: Set up Julia ${{ matrix.julia-version }}
         uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
       - name: Install Documenter and Literate
-        run: julia -e 'using Pkg; Pkg.add("Documenter", "Literate")'
+        run: julia -e 'using Pkg; Pkg.add(["Documenter", "Literate", "PyPlot"])'
       - name: Install SNMRForward in Julia
         run: |
           julia -e 'using Pkg; Pkg.develop(path=".")'
