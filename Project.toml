@@ -1,7 +1,7 @@
 name = "SNMRForward"
 uuid = "7a571783-2426-4210-b64c-8cc94fde9200"
 authors = ["Richard Taylor <29562583+richardt94@users.noreply.github.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
@@ -11,5 +11,5 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 [compat]
 SpecialFunctions = "1.6 - 2.1.4"
 FFTW = "1.4.6"
-FastGaussQuadrature = "0.4.9"
+FastGaussQuadrature = "0.4.9, 1.0.2"
 julia = "1.5.3"
